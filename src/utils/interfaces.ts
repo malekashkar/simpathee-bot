@@ -1,3 +1,5 @@
+import { BAZAAR_ITEM_IDS } from "../data";
+
 export interface IPlayerActivity {
   success: boolean;
   uuid: string;
@@ -5,6 +7,28 @@ export interface IPlayerActivity {
     online: boolean;
     gameType: string;
     mode: string;
+  };
+}
+
+export interface IPlayerDataResponse {
+  success: true;
+  player: {
+    _id: string;
+    uuid: string;
+    firstLogin: number;
+    playername: string;
+    lastLogin: number;
+    displayname: string;
+    knownAliases: string[];
+    knownAliasesLower: string[];
+    achievementsOneTime: string[];
+    network_update_book: string;
+    lastLogout: number;
+    quickjoin_timestamp: number;
+    quickjoin_uses: number;
+    achievementPoints: number;
+    newPackageRank: string;
+    monthlyPackageRank?: string;
   };
 }
 
@@ -133,12 +157,55 @@ type TExpirementResults = {
   [x: string]: number;
 };
 
-export default interface ISkyblockProfilesResponse {
+export interface ISkyblockProfilesResponse {
   success: boolean;
   profiles: Profile[];
 }
 
-interface Profile {
+export interface IMojangProfileResponse {
+  name: string;
+  id: string;
+}
+
+export interface IAuctionResponse {
+  success: boolean;
+  page: number;
+  totalPages: number;
+  totalAuctions: number;
+  lastUpdated: number;
+  auctions: IAuctionItem[];
+}
+
+export interface IAuctionItem {
+  _id: string;
+  uuid: string;
+  auctioneer: string;
+  profile_id: string;
+  coop: string[];
+  start: number;
+  end: number;
+  item_name: string;
+  item_lore: string;
+  extra: string;
+  category: string;
+  tier: string;
+  starting_bid: number;
+  item_bytes: string;
+  itemData?: IItem;
+  claimed: boolean;
+  claimed_bidders?: any;
+  highest_bid_amount: number;
+  bin?: boolean;
+  bids: {
+    auction_id: string;
+    bidder: string;
+    profile_id: string;
+    amount: number;
+    timestamp: number;
+  }[];
+}
+
+export interface Profile {
   profile_id: string;
   members: TProfileMembers;
   community_upgrades: {
@@ -456,4 +523,44 @@ export interface NBTData {
     };
   };
   Damage: number;
+}
+
+export type TBazaarItemIds = typeof BAZAAR_ITEM_IDS[number];
+
+export interface IBazaarResponse {
+  success: boolean;
+  lastUpdated: number;
+  products: Record<TBazaarItemIds, IBazaarProduct>;
+}
+
+export interface IBazaarProduct {
+  product_id: TBazaarItemIds;
+  sell_summary: { amount: number; pricePerUnit: number; orders: number }[];
+  buy_summary: { amount: number; pricePerUnit: number; orders: number }[];
+  quick_status: {
+    productId: TBazaarItemIds;
+    sellPrice: number;
+    sellVolume: number;
+    sellMovingWeek: number;
+    sellOrders: number;
+    buyPrice: number;
+    buyVolume: number;
+    buyMovingWeek: number;
+    buyOrders: number;
+  };
+}
+
+export type something = Record<string, string>;
+
+export interface IItem {
+  id: string;
+  displayName: string;
+  lore: string[];
+  color?: string;
+  amount: number;
+  worth?: number;
+  recombobulated: boolean;
+  hotPotatoCount: number;
+  enchantments: { enchantName: string; enchantLevel: number }[];
+  backpackItems?: IItem[];
 }

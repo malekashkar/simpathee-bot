@@ -1,8 +1,10 @@
 import { Message, TextChannel } from "discord.js";
 import Command from ".";
 import config from "../config";
-import { StarsModel } from "../models/stars";
+import { AccountModel } from "../models/account";
 import embeds from "../utils/embeds";
+import moment from "moment";
+import { ArchivedModel } from "../models/archived";
 
 export default class LeafCommand extends Command {
   cmdName = "leaf";
@@ -10,31 +12,71 @@ export default class LeafCommand extends Command {
 
   async run(message: Message) {
     if (message.channel.id === config.leafChannelId) {
-      const account = await StarsModel.findOne({
-        seen: false,
+      // Delete outdated accounts
+      const outdatedAccounts = await AccountModel.find({
+        createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
       });
-      if (account) {
+      await AccountModel.updateMany(
+        { _id: { $in: outdatedAccounts.map((x) => x._id) } },
+        { seen: true }
+      );
+
+      // Display accounts
+      const accounts = await AccountModel.find({
+        createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
+      }).limit(3);
+      if (accounts?.length) {
+        message.channel.send(
+          message.author.toString(),
+          embeds.normal(
+            `${message.author.username}'s Leaf List`,
+            accounts
+              .map(
+                (account, i) =>
+                  `${i + 1} **${account.username}** | __${
+                    account.itemName
+                  }__ (${moment(account.createdAt).format("lll")})`
+              )
+              .join("\n")
+          )
+        );
+
+        const accountsLeft = await AccountModel.countDocuments({
+          createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
+        });
+
+        const shortFormattedAccounts = accounts
+          .map((account) => account.username)
+          .join(", ");
         const leafLogChannel = message.guild.channels.resolve(
           config.leafLogChannelId
         ) as TextChannel;
-        await message.channel.send(
-          embeds.empty().setTitle(`${account.username} | ${account.itemName}`)
-        );
-        await leafLogChannel.send(
-          embeds
-            .normal(
-              `Leaf Logs`,
-              `${message.author} pulled the username **${account.username}** to leaf.`
-            )
-            .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-        );
+        if (leafLogChannel) {
+          leafLogChannel.send(
+            embeds
+              .normal(
+                `Leaf Logs`,
+                `${message.author} pulled the accounts **${shortFormattedAccounts}**.`
+              )
+              .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+              .setFooter(`${accountsLeft} Usernames Left`)
+          );
+        }
 
-        await StarsModel.updateOne(account._id, {
-          seen: true,
-        });
+        // Move the accounts into archived
+        for (const account of accounts) {
+          await account.deleteOne();
+          await ArchivedModel.create({
+            username: account.username,
+            itemName: account.itemName,
+            createdAt: new Date(),
+          });
+        }
       } else {
         message.channel.send(
-          embeds.error(`There are no accounts in the database currently.`)
+          embeds.error(
+            `There were no accounts found in the database, please be patient for more accounts to load in.`
+          )
         );
       }
     }

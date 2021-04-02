@@ -1,6 +1,6 @@
 import { getModelForClass, prop } from "@typegoose/typegoose";
 
-export class Stars {
+export class Archived {
   @prop()
   username: string;
 
@@ -9,9 +9,6 @@ export class Stars {
 
   @prop()
   createdAt: Date;
-
-  @prop({ default: false })
-  seen?: boolean;
 }
 
-export const StarsModel = getModelForClass(Stars);
+export const ArchivedModel = getModelForClass(Archived);

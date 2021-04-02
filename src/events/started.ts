@@ -1,13 +1,19 @@
 import logger from "../utils/logger";
 import Event, { EventNameType } from ".";
-import { StarsModel } from "../models/stars";
-import fetch from "node-fetch";
-import { promisify } from "util";
+import { AccountModel } from "../models/account";
 import Mineflayer from "mineflayer";
-import prismarine from "prismarine-nbt";
 import { config as dotenv } from "dotenv";
-import ISkyblockProfilesResponse, { NBTData } from "../utils/interfaces";
-import { colorCodes, valuableItems } from "../utils/extra";
+import { Profile } from "../utils/interfaces";
+import { getHypixelPlayer, getSkyblockProfile } from "../utils/hypixelApi";
+import {
+  getAllAuctionItems,
+  parseInventoryData,
+  updateAuctionItemPrices,
+} from "../utils/hypixel";
+import { sleep } from "../utils";
+import { ArchivedModel } from "../models/archived";
+import { TimestampModel } from "../models/timestamp";
+import { accounts } from "../config";
 
 dotenv();
 
@@ -16,15 +22,48 @@ export default class Started extends Event {
 
   async handle() {
     logger.info("BOT", "The bot has started!");
-    await startFetchingPlayers();
+
+    for (let i = 0; i < 5; i++) {
+      startAccountFetcher(
+        accounts[i].email,
+        accounts[i].password,
+        accounts[i].apiKey
+      );
+    }
+
+    await startAuctionUpdater();
+    setInterval(async () => await startAuctionUpdater());
   }
 }
 
-async function startFetchingPlayers() {
+async function startAuctionUpdater() {
+  const auctionsLastUpdate = await TimestampModel.findOne({
+    category: "AUCTIONS_LAST_UPDATE",
+  });
+  if (
+    !auctionsLastUpdate ||
+    auctionsLastUpdate?.lastTime + 6 * 60 * 60e3 <= Date.now()
+  ) {
+    await updateAuctionItemPrices(await getAllAuctionItems());
+    logger.info(`AUCTION_ITEMS`, `Auction items updated!`);
+  }
+
+  if (auctionsLastUpdate?.lastTime + 6 * 60 * 60e3 <= Date.now()) {
+    auctionsLastUpdate.lastTime = Date.now();
+    await auctionsLastUpdate.save();
+  } else {
+    await TimestampModel.create({
+      category: "AUCTIONS_LAST_UPDATE",
+      lastTime: Date.now(),
+    });
+  }
+}
+
+function startAccountFetcher(email: string, pass: string, apiKey: string) {
   const client = Mineflayer.createBot({
     host: "hypixel.net",
-    username: "nikkipearson20@yahoo.com",
-    password: "Malek132$",
+    username: email,
+    password: pass,
   });
 
   client.on("kicked", console.log);
@@ -33,111 +72,166 @@ async function startFetchingPlayers() {
     await sleep(5000);
     client.chat("/skyblock");
     await sleep(5000);
-    logger.info("BOT", `Player scraping process has begun.`);
-    await startScrapeProcess(client);
+    logger.info("BOT", `${client.username} is now scraping players`);
+    await startScrapeProcess(client, apiKey);
   });
 }
 
-let cachedPlayers: {
-  uuid: string;
-  username: string;
-}[] = [];
+const validWeapons = [
+  "SHADOW_FURY",
+  "VALKYRIE",
+  "SCYLLA",
+  "ASTRAEA",
+  "HYPERION",
+  "BONE_BOOMERANG",
+];
 
-async function startScrapeProcess(client: Mineflayer.Bot) {
-  const playersList = await getDungeonHubPlayerList(client);
-  for (const player of playersList) {
-    const playersItemsData = await getAllPlayersItems(player.uuid);
-    if (!playersItemsData) continue;
+const validArmor = [
+  "POWER_WITHER_HELMET",
+  "POWER_WITHER_CHESTPLATE",
+  "POWER_WITHER_LEGGINGS",
+  "POWER_WITHER_BOOTS",
 
-    const fiveStarredItem = playersItemsData.filter(
-      (item) => item.tag?.display?.Name?.match(/✪/gm)?.length === 5
+  "WITHER_GOGGLES",
+  "WISE_WITHER_HELMET",
+  "WISE_WITHER_CHESTPLATE",
+  "WISE_WITHER_LEGGINGS",
+  "WISE_WITHER_BOOTS",
+
+  "TANK_WITHER_HELMET",
+  "TANK_WITHER_CHESTPLATE",
+  "TANK_WITHER_LEGGINGS",
+  "TANK_WITHER_BOOTS",
+
+  "SPEED_WITHER_HELMET",
+  "SPEED_WITHER_CHESTPLATE",
+  "SPEED_WITHER_LEGGINGS",
+  "SPEED_WITHER_BOOTS",
+];
+
+async function startScrapeProcess(client: Mineflayer.Bot, apiKey: string) {
+  let playersList = await getDungeonHubPlayerList(client);
+  if (!playersList)
+    return logger.error(
+      `SCRAPING_PROCESS`,
+      `"${client.username}" failed to fetch the players list of a dungeons lobby.`
     );
-    if (fiveStarredItem.length >= 3) continue;
 
-    const valuableNonFiveStarred = playersItemsData.filter(
-      (item) =>
-        item.tag?.ExtraAttributes?.id &&
-        valuableItems.includes(item.tag.ExtraAttributes.id) &&
-        item.tag.display.Name.match(/✪/gm)?.length >= 1 &&
-        item.tag.display.Name.match(/✪/gm)?.length <= 4
-    );
-    for (const item of valuableNonFiveStarred) {
-      const duplicate = await StarsModel.findOne({
-        username: player.username,
-        itemName: item.tag.display.Name,
-      });
-      if (!duplicate) {
-        await StarsModel.create({
-          username: player.username,
-          itemName: item.tag.display.Name,
-          createdAt: new Date(),
-        });
-      }
-    }
+  for (const player of playersList.slice(0, 50)) {
+    await processAcount(player.username, player.uuid, apiKey);
   }
-  setTimeout(async () => await startScrapeProcess(client), 60 * 1000);
+
+  // Restart process
+  setTimeout(async () => await startScrapeProcess(client, apiKey), 120 * 1000);
 }
 
-function convertProperties(item: NBTData) {
-  if (item.tag?.display?.Name) {
-    item.tag.display.Name = item.tag.display.Name.replace(/§./gm, "");
-  }
-  if (item.tag?.display?.Lore) {
-    item.tag.display.Lore = item.tag.display.Lore.map((str) =>
-      str.replace(/§./gm, "")
-    );
-  }
-  if (item.tag?.ExtraAttributes?.color) {
-    const hexCodes = item.tag.ExtraAttributes.color.split(":");
-    item.tag.ExtraAttributes.color = rgbToHex(
-      hexCodes[0],
-      hexCodes[1],
-      hexCodes[2]
-    );
-  }
-  return item;
-}
+export async function processAcount(
+  playerUsername: string,
+  playerUuid: string,
+  apiKey: string
+) {
+  // Get all player profiles
+  const skyblockProfiles = await getSkyblockProfile(playerUuid, apiKey);
+  if (!skyblockProfiles?.length) return;
 
-async function getAllPlayersItems(playerUuid: string) {
-  const request = await fetch(
-    `https://api.hypixel.net/skyblock/profiles?key=${process.env.HYPIXEL_API_KEY}&uuid=${playerUuid}`
+  // Scrape all player items
+  const playersItemsData = await scrapeProfilesItems(
+    skyblockProfiles,
+    playerUuid
   );
-  if (!request.ok) return;
+  if (!playersItemsData?.length) return;
 
-  const response = (await request.json()) as ISkyblockProfilesResponse;
-  if (response?.profiles) {
-    let totalItems: NBTData[] = [];
-    for (const profile of response.profiles) {
-      let currentProfileItems: NBTData[] = [];
-      const memberProfile = profile.members[playerUuid];
+  // Check 5 starred weapon: skip
+  const fiveStarredWeapon = playersItemsData.some(
+    (item) =>
+      validWeapons.includes(item.id) &&
+      item.displayName?.match(/✪/gm)?.length === 5
+  );
+  if (fiveStarredWeapon) return;
 
-      const enderChest = memberProfile.ender_chest_contents?.data
-        ? await parseInventoryData(memberProfile.ender_chest_contents?.data)
-        : null;
-      const wardrobe = memberProfile.wardrobe_contents?.data
-        ? await parseInventoryData(memberProfile.wardrobe_contents?.data)
-        : null;
-      const inventory = memberProfile.inv_contents?.data
-        ? await parseInventoryData(memberProfile.inv_contents?.data)
-        : null;
+  // Check over 3 five starred items: skip
+  const fiveStarredItems = playersItemsData.filter(
+    (item) =>
+      item.displayName?.match(/✪/gm)?.length === 5 &&
+      (validArmor.includes(item.id) || validWeapons.includes(item.id))
+  );
+  if (fiveStarredItems.length >= 3) return;
 
-      if (enderChest)
-        currentProfileItems = currentProfileItems.concat(enderChest);
-      if (wardrobe) currentProfileItems = currentProfileItems.concat(wardrobe);
-      if (inventory)
-        currentProfileItems = currentProfileItems.concat(inventory);
+  // Check for hit items
+  const valuableItems = playersItemsData.filter(
+    (item) =>
+      item.displayName?.match(/✪/gm)?.length !== 5 &&
+      (validArmor.includes(item.id) || validWeapons.includes(item.id))
+  );
+  if (!valuableItems.length) return;
 
-      const backpacks = await getBackpacksAndData(currentProfileItems);
-      if (backpacks)
-        currentProfileItems = currentProfileItems.concat(backpacks);
+  for (const item of valuableItems) {
+    // MVP++ Check
+    const playerData = await getHypixelPlayer(playerUuid);
+    if (playerData?.monthlyPackageRank === "SUPERSTAR") continue;
 
-      totalItems = totalItems.concat(currentProfileItems);
+    // Duplicate account check
+    const accountDuplicate = await AccountModel.findOne({
+      username: playerUsername,
+      itemName: item.displayName,
+    });
+    const archivedDuplicate = await ArchivedModel.findOne({
+      username: playerUsername,
+      itemName: item.displayName,
+    });
+
+    // Account hit
+    if (!archivedDuplicate && !accountDuplicate) {
+      logger.info(`HIT`, `${playerUsername} | ${item.displayName}`);
+      await AccountModel.create({
+        username: playerUsername,
+        itemName: item.displayName,
+        createdAt: new Date(),
+      });
     }
-
-    return totalItems.map((item) => convertProperties(item));
   }
 }
 
+export async function scrapeProfilesItems(
+  skyblockProfiles: Profile[],
+  playerUuid: string
+) {
+  return (
+    await Promise.all(
+      skyblockProfiles.map(async (profile) => {
+        const memberProfile = profile.members[playerUuid];
+        if (!memberProfile) return;
+
+        const enderChest = await parseInventoryData(
+          memberProfile.ender_chest_contents?.data
+        );
+        const wardrobe = await parseInventoryData(
+          memberProfile.wardrobe_contents?.data
+        );
+        const inventory = await parseInventoryData(
+          memberProfile.inv_contents?.data
+        );
+        const armor = await parseInventoryData(memberProfile.inv_armor?.data);
+
+        const currentProfileItems = enderChest.concat(
+          wardrobe,
+          inventory,
+          armor
+        );
+        const backpackItems = currentProfileItems
+          .map((item) => item.backpackItems)
+          .filter((x) => !!x)
+          .flat();
+
+        return currentProfileItems.concat(backpackItems);
+      })
+    )
+  )
+    .filter((x) => !!x)
+    .flat();
+}
+
+let cachedPlayers: string[] = [];
 async function getDungeonHubPlayerList(client: Mineflayer.Bot) {
   client.chat("/hub");
   await sleep(2000);
@@ -145,64 +239,20 @@ async function getDungeonHubPlayerList(client: Mineflayer.Bot) {
   await sleep(2000);
 
   const players = Object.values(client.players);
-  const uncachedPlayers = players
-    .filter(
-      (player) =>
-        !cachedPlayers.includes(player) &&
-        !player.username.includes("!") &&
-        player.username.toLowerCase() !== client.username.toLowerCase()
-    )
-    .map((player) => {
-      return {
-        uuid: player.uuid.replace(/-/gm, ""),
-        username: player.username,
-      };
+  if (!players.length) return [];
+
+  let uncachedPlayers: { username: string; uuid: string }[] = [];
+  for (const player of players) {
+    if (cachedPlayers.includes(player.username)) continue;
+    if (player.username.includes("!")) continue;
+    if (player.username.toLowerCase() === client.username.toLowerCase())
+      continue;
+
+    cachedPlayers.push(player.username);
+    uncachedPlayers.push({
+      username: player.username,
+      uuid: player.uuid.replace(/-/gm, ""),
     });
-  cachedPlayers = cachedPlayers.concat(uncachedPlayers);
+  }
   return uncachedPlayers;
-}
-
-const parseNbt = promisify(prismarine.parse);
-async function parseInventoryData(nbt: string) {
-  const bufferData = Buffer.from(nbt, "base64");
-  const parsedNbt = await parseNbt(bufferData);
-  return prismarine.simplify(parsedNbt).i as NBTData[];
-}
-
-async function parseBackpackData(nbt: any[]) {
-  const bufferData = Buffer.from(nbt);
-  const parsedNbt = await parseNbt(bufferData);
-  return prismarine.simplify(parsedNbt).i as NBTData[];
-}
-
-async function getBackpacksAndData(inventoryData: NBTData[]) {
-  const backpacksData = inventoryData
-    .filter((x: NBTData) =>
-      x.tag?.ExtraAttributes?.id?.toLowerCase().includes("backpack")
-    )
-    .map((x: NBTData) => {
-      if (x.tag.ExtraAttributes.id.toLowerCase() === "small_backpack")
-        return x.tag.ExtraAttributes.small_backpack_data;
-      if (x.tag.ExtraAttributes.id.toLowerCase() === "medium_backpack")
-        return x.tag.ExtraAttributes.medium_backpack_data;
-      if (x.tag.ExtraAttributes.id.toLowerCase() === "large_backpack")
-        return x.tag.ExtraAttributes.large_backpack_data;
-      if (x.tag.ExtraAttributes.id.toLowerCase() === "greater_backpack")
-        return x.tag.ExtraAttributes.greater_backpack_data;
-      if (x.tag.ExtraAttributes.id.toLowerCase() === "jumbo_backpack")
-        return x.tag.ExtraAttributes.jumbo_backpack_data;
-    })
-    .filter((data) => !!data);
-  return (
-    await Promise.all(backpacksData.map((x) => parseBackpackData(x)))
-  ).flat();
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function rgbToHex(r: string, g: string, b: string) {
-  const componentToHex = (hex: string) => (hex.length == 1 ? "0" + hex : hex);
-  return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }

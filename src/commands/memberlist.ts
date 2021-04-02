@@ -2,7 +2,7 @@ import { Message } from "discord.js";
 import Command from ".";
 import config from "../config";
 import embeds from "../utils/embeds";
-import { getGuild, getPlayerActivity, uuidToUsername } from "../utils/hypixel";
+import { getGuild, getPlayerActivity, uuidToUsername } from "../utils/hypixelApi";
 import Paginator from "../utils/pagecord";
 
 interface MemberInformation {
@@ -25,10 +25,6 @@ export default class MemberlistCommand extends Command {
       );
 
     const loadingEmbed = await message.channel.send(embeds.loading());
-    const memberInformationEmbed = embeds
-      .empty()
-      .setTitle(`${guildInformation.name} Members`);
-
     const membersInformation: MemberInformation[] = [];
     for (const member of guildInformation.members) {
       const cacheMember = await this.client.redis.get(`gm-${member.uuid}`);

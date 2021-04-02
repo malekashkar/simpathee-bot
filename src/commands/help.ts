@@ -11,12 +11,12 @@ export default class HelpCommand extends Command {
     const memberRoleIds = message.member.roles.cache
       .array()
       .map((role) => role.id);
-    const filteredRoles = this.client.commands.filter(
-      (commandObj) =>
-        !commandObj.disabled &&
-        memberRoleIds.some((roleId) =>
-          commandObj.rolePermissions.includes(roleId)
-        )
+    const filteredRoles = this.client.commands.filter((commandObj) =>
+      !commandObj.disabled && commandObj.rolePermissions.length
+        ? memberRoleIds.some((roleId) =>
+            commandObj.rolePermissions.includes(roleId)
+          )
+        : true
     );
     const description = filteredRoles
       .map(
