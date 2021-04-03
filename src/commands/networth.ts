@@ -9,6 +9,9 @@ import {
   getSkyblockProfile,
 } from "../utils/hypixelApi";
 import { IItem } from "../utils/interfaces";
+import { config as dotenv } from "dotenv";
+
+dotenv();
 
 export default class NetworthCommand extends Command {
   cmdName = "networth";
@@ -28,7 +31,10 @@ export default class NetworthCommand extends Command {
         embeds.error(`The username doesn't seem to be a valid MC username.`)
       );
 
-    const skyblockProfiles = await getSkyblockProfile(mojangProfile.id);
+    const skyblockProfiles = await getSkyblockProfile(
+      mojangProfile.id,
+      process.env.COMMANDS_API_KEY
+    );
     if (!skyblockProfiles)
       return message.channel.send(
         embeds.error(
@@ -45,36 +51,42 @@ export default class NetworthCommand extends Command {
         return -1;
       else return 1;
     })[0];
+    
     const memberProfile = latestProfile.members[mojangProfile.id];
-
-    console.log(memberProfile);
-
     const inventoryContent = await parseInventoryData(
-      memberProfile.inv_contents.data
+      memberProfile.inv_contents.data,
+      true
     );
-    const inventoryWorth = (
-      await Promise.all(inventoryContent.map(checkItemPrice))
-    ).reduce((a, b) => a + b.worth, 0);
+    const inventoryWorth = inventoryContent.reduce((a, b) => a + b.worth, 0);
 
     const enderchestContent = await parseInventoryData(
-      memberProfile.ender_chest_contents.data
+      memberProfile.ender_chest_contents.data,
+      true
     );
     const enderchestWorth = enderchestContent.reduce((a, b) => a + b.worth, 0);
 
     const wardrobeContent = await parseInventoryData(
-      memberProfile.wardrobe_contents.data
+      memberProfile.wardrobe_contents.data,
+      true
     );
     const wardrobeWorth = wardrobeContent.reduce((a, b) => a + b.worth, 0);
 
     const talismanContent = await parseInventoryData(
-      memberProfile.wardrobe_contents.data
+      memberProfile.wardrobe_contents.data,
+      true
     );
     const talismanWorth = talismanContent.reduce((a, b) => a + b.worth, 0);
 
-    const armorContent = await parseInventoryData(memberProfile.inv_armor.data);
+    const armorContent = await parseInventoryData(
+      memberProfile.inv_armor.data,
+      true
+    );
     const armorWorth = armorContent.reduce((a, b) => a + b.worth, 0);
 
-    const petContent = await parseInventoryData(memberProfile.inv_armor.data);
+    const petContent = await parseInventoryData(
+      memberProfile.inv_armor.data,
+      true
+    );
     const petWorth = petContent.reduce((a, b) => a + b.worth, 0);
 
     const totalNetworth =

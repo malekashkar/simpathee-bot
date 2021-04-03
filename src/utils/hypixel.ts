@@ -95,7 +95,7 @@ export async function updateAuctionItemPrices(auctionItems: IAuctionItem[]) {
 }
 
 const parseNbt = promisify(parse);
-export async function parseInventoryData(nbt: string) {
+export async function parseInventoryData(nbt: string, checkPrice = false) {
   if (!nbt) return [];
   const bufferData = Buffer.from(nbt, "base64");
   if (!bufferData) return [];
@@ -103,18 +103,18 @@ export async function parseInventoryData(nbt: string) {
   if (!parsedNbt) return [];
   const items = simplify(parsedNbt).i as NBTData[];
   if (!items?.length) return [];
-  return await Promise.all(items.map((item) => Item(item, false)));
+  return await Promise.all(items.map((item) => Item(item, checkPrice)));
 }
 
-export async function parseItemData(nbt: string) {
+export async function parseItemData(nbt: string, checkPrice = false) {
   if (!nbt) return null;
   const bufferData = Buffer.from(nbt, "base64");
   const parsedNbt = await parseNbt(bufferData);
   const item = simplify(parsedNbt).i[0] as NBTData;
-  return await Item(item, false);
+  return await Item(item, checkPrice);
 }
 
-export async function parseBackpackData(nbt: number[]) {
+export async function parseBackpackData(nbt: number[], checkPrice = false) {
   if (!nbt) return [];
   const bufferData = Buffer.from(nbt);
   if (!bufferData) return [];
@@ -122,7 +122,7 @@ export async function parseBackpackData(nbt: number[]) {
   if (!parsedNbt) return [];
   const items = simplify(parsedNbt).i as NBTData[];
   if (!items?.length) return [];
-  return await Promise.all(items.map((item) => Item(item, false)));
+  return await Promise.all(items.map((item) => Item(item, checkPrice)));
 }
 
 export async function checkItemPrice(item: IItem) {
