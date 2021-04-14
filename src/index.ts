@@ -1,4 +1,10 @@
-import { Client as DiscordClient, ClientOptions, Collection } from "discord.js";
+import {
+  Client as DiscordClient,
+  ClientOptions,
+  Collection,
+  Message,
+  TextChannel,
+} from "discord.js";
 import { config as dotenv } from "dotenv";
 import path from "path";
 import fs from "fs";
@@ -7,6 +13,9 @@ import Command from "./commands";
 import mongoose from "mongoose";
 import Logger from "./utils/logger";
 import Redis from "ioredis";
+import config from "./config";
+import embeds from "./utils/embeds";
+import { HypixelAPI } from "./utils/hypixelApi";
 
 dotenv();
 
@@ -15,6 +24,7 @@ export default class Client extends DiscordClient {
   cooldowns: Collection<string, Collection<string, number>> = new Collection();
 
   redis = new Redis();
+  hypixel = new HypixelAPI(process.env.HYPIXEL_API_KEY);
 
   constructor(options?: ClientOptions) {
     super({
@@ -34,6 +44,7 @@ export default class Client extends DiscordClient {
     this.database(process.env.MONGO_URL);
     this.eventLoader();
     this.commandLoader();
+    this.on("message", this.onMessage);
   }
 
   private database(URL: string) {
@@ -129,6 +140,64 @@ export default class Client extends DiscordClient {
           this.commandLoader(commandPath);
         }
       }
+    }
+  }
+
+  onMessage(message: Message) {
+    if (!(message.channel instanceof TextChannel) || message.author?.bot)
+      return;
+
+    try {
+      let prefix = "";
+      if (process.env.NODE_ENV === "production")
+        prefix = config.prefix.toLowerCase();
+      else prefix = config.testingPrefix;
+
+      if (!prefix || message.content.toLowerCase().indexOf(prefix) !== 0)
+        return;
+
+      const args = message.content
+        .slice(prefix.length)
+        .trim()
+        .replace(/ /g, "\n")
+        .split(/\n+/g);
+      const command = args.shift().toLowerCase();
+
+      for (const commandObj of this.commands.array()) {
+        if (commandObj.disabled) return;
+        if (
+          commandObj.cmdName.toLowerCase() === command ||
+          commandObj.aliases.map((x) => x.toLowerCase()).includes(command)
+        ) {
+          if (commandObj.rolePermissions.length) {
+            if (
+              !commandObj.rolePermissions.some((roleId) =>
+                message.member.roles.cache
+                  .map((role) => role.id)
+                  .includes(roleId)
+              )
+            ) {
+              const roles = commandObj.rolePermissions
+                .map((roleId) => message.guild.roles.resolve(roleId))
+                .join(", ");
+              message.channel.send(
+                embeds.error(
+                  `You may only use this command with the following role(s): ${roles}`
+                )
+              );
+              return;
+            }
+          }
+
+          commandObj
+            .run(message, args)
+            .catch((err) =>
+              Logger.error(`${command.toUpperCase()}_ERROR`, err)
+            );
+        }
+      }
+    } catch (err) {
+      Logger.error("COMMAND_HANDLER", err);
     }
   }
 }

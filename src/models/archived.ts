@@ -6,9 +6,6 @@ export class Archived {
 
   @prop()
   itemName: string;
-
-  @prop()
-  createdAt: Date;
 }
 
 export const ArchivedModel = getModelForClass(Archived);

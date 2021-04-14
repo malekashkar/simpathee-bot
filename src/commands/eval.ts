@@ -11,6 +11,20 @@ import config from "../config";
 import embeds from "../utils/embeds";
 import Logger from "../utils/logger";
 
+import { Account, AccountModel } from "../models/account";
+import { Archived, ArchivedModel } from "../models/archived";
+import { AuctionItem, AuctionModel } from "../models/auctionItem";
+import { BazaarItem, BazaarModel } from "../models/bazaarItem";
+import { Timestamp, TimestampModel } from "../models/timestamp";
+
+const Models = {
+  AccountModel,
+  ArchivedModel,
+  AuctionModel,
+  BazaarModel,
+  TimestampModel,
+};
+
 dotenv.config();
 
 class EvalCommand extends DevCommand {
@@ -18,7 +32,13 @@ class EvalCommand extends DevCommand {
   description = "Evaluates any JavaScript code.";
 
   async run(message: Message) {
-    const prefixRegex = new RegExp(`^${config.prefix}`, "i");
+    const prefixRegex = new RegExp(
+      `^${config.prefix.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      )}|${config.testingPrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+      "i"
+    );
     const prefixMatch = message.content.match(prefixRegex);
     let content = message.content;
 

@@ -14,19 +14,25 @@ export default class LeafCommand extends Command {
     if (message.channel.id === config.leafChannelId) {
       // Delete outdated accounts
       const outdatedAccounts = await AccountModel.find({
-        createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
+        createdAt: { $lte: new Date(Date.now() - 30 * 60e3) },
       });
-      await AccountModel.updateMany(
-        { _id: { $in: outdatedAccounts.map((x) => x._id) } },
-        { seen: true }
-      );
+      await AccountModel.deleteMany({
+        _id: { $in: outdatedAccounts.map((x) => x._id) },
+      });
+
+      for (const outdatedAccount of outdatedAccounts) {
+        await ArchivedModel.create({
+          username: outdatedAccount.username,
+          itemName: outdatedAccount.itemName,
+        });
+      }
 
       // Display accounts
       const accounts = await AccountModel.find({
         createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
       }).limit(3);
       if (accounts?.length) {
-        message.channel.send(
+        await message.channel.send(
           message.author.toString(),
           embeds.normal(
             `${message.author.username}'s Leaf List`,
@@ -69,7 +75,6 @@ export default class LeafCommand extends Command {
           await ArchivedModel.create({
             username: account.username,
             itemName: account.itemName,
-            createdAt: new Date(),
           });
         }
       } else {

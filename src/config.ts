@@ -1,5 +1,6 @@
 export default {
   prefix: "!",
+  testingPrefix: "?",
   ingameGuildId: "60392ba18ea8c9e50dd62cb4",
   redisCooldowns: {
     guildMemberStatus: 10 * 60 * 1000,
@@ -8,7 +9,67 @@ export default {
   leafLogChannelId: "826504095430344744",
 };
 
+export const validWeapons = [
+  "SHADOW_FURY",
+  "VALKYRIE",
+  "SCYLLA",
+  "ASTRAEA",
+  "HYPERION",
+  "BONE_BOOMERANG",
+];
+
+export const validArmor = [
+  "POWER_WITHER_HELMET",
+  "POWER_WITHER_CHESTPLATE",
+  "POWER_WITHER_LEGGINGS",
+  "POWER_WITHER_BOOTS",
+
+  "WITHER_GOGGLES",
+  "WISE_WITHER_HELMET",
+  "WISE_WITHER_CHESTPLATE",
+  "WISE_WITHER_LEGGINGS",
+  "WISE_WITHER_BOOTS",
+
+  "TANK_WITHER_HELMET",
+  "TANK_WITHER_CHESTPLATE",
+  "TANK_WITHER_LEGGINGS",
+  "TANK_WITHER_BOOTS",
+
+  "SPEED_WITHER_HELMET",
+  "SPEED_WITHER_CHESTPLATE",
+  "SPEED_WITHER_LEGGINGS",
+  "SPEED_WITHER_BOOTS",
+];
+
 export const accounts = [
+  {
+    email: "mac.myers21@gmail.com",
+    password: "Achillin21",
+    apiKey: "cd96c51e-f47f-4ad7-b200-bc71e168aecb",
+  },
+  {
+    email: "s3tt0n@gmail.com",
+    password: "Deaththekid666",
+    apiKey: "bf0ace91-e57b-4376-adf9-208b2166906a",
+  },
+  {
+    email: "mjrasmussen88@gmail.com",
+    password: "Raspper1",
+    apiKey: "72171113-cfcf-4a73-b462-11a70f8d557e",
+  },
+  {
+    email: "breannabenson63@gmail.com",
+    password: "Sasukerox5",
+    apiKey: "6c6416a1-671d-43d2-ad6c-29303ddf914a",
+  },
+  {
+    email: "caydengibbons@gmail.com",
+    password: "gibby#31",
+    apiKey: "2b137abb-c584-49b9-9c79-c04569af6765",
+  },
+];
+
+export const accountss = [
   {
     email: `333hasi@gmail.com`,
     password: `Aa1661385`,
@@ -128,10 +189,5 @@ export const accounts = [
     email: "loganmathis10@gmail.com",
     password: "Mathis35",
     apiKey: "9e1dfe77-a14f-4b7f-ba4a-a1c88321c244",
-  },
-  {
-    email: "nathan.thompson2006.nt@gmail.com",
-    password: "Zeroblood1",
-    apiKey: "527e21c0-21e1-4340-ad33-c8d2401ad591",
   },
 ];

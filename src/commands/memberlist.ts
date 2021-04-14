@@ -2,7 +2,6 @@ import { Message } from "discord.js";
 import Command from ".";
 import config from "../config";
 import embeds from "../utils/embeds";
-import { getGuild, getPlayerActivity, uuidToUsername } from "../utils/hypixelApi";
 import Paginator from "../utils/pagecord";
 
 interface MemberInformation {
@@ -18,7 +17,7 @@ export default class MemberlistCommand extends Command {
   description = "Check the activity of the members in the guild.";
 
   async run(message: Message) {
-    const guildInformation = await getGuild(config.ingameGuildId);
+    const guildInformation = await this.client.hypixel.getGuild(config.ingameGuildId);
     if (!guildInformation)
       return message.channel.send(
         embeds.error(`There was an error fetching the guild information.`)
@@ -41,8 +40,8 @@ export default class MemberlistCommand extends Command {
         }
       }
 
-      const playerUsername = await uuidToUsername(member.uuid);
-      const playerActivity = await getPlayerActivity(member.uuid);
+      const playerUsername = await this.client.hypixel.playerUuidToUsername(member.uuid);
+      const playerActivity = await this.client.hypixel.getPlayerActivity(member.uuid);
 
       if (playerUsername && playerActivity) {
         const playerData: MemberInformation = {

@@ -1,15 +1,15 @@
-import { IAuctionItem, IItem, NBTData } from "./interfaces";
+import { IAuctionItem, IBazaarProduct, IItem, NBTData } from "./interfaces";
 import { parse, simplify } from "prismarine-nbt";
 import { promisify } from "util";
 import { AuctionModel } from "../models/auctionItem";
 import { rgbToHex } from ".";
-import { getAuctionPage, getBazaarItemPrice } from "./hypixelApi";
 import { BAZAAR_ITEM_IDS } from "../data";
-import logger from "../utils/logger";
+import { BazaarModel } from "../models/bazaarItem";
+import { HypixelAPI } from "./hypixelApi";
 
-export async function getAllAuctionItems() {
+export async function getAllAuctionItems(hypixelApi: HypixelAPI) {
   let auctionItems: IAuctionItem[] = [];
-  const firstPage = await getAuctionPage();
+  const firstPage = await hypixelApi.getAuctionPage();
   if (firstPage) {
     const formattedFirstPageAuctions = await Promise.all(
       firstPage.auctions.map(async (auction) => {
@@ -19,7 +19,7 @@ export async function getAllAuctionItems() {
     );
     auctionItems = auctionItems.concat(formattedFirstPageAuctions);
     for (let i = 1; i < firstPage.totalPages; i++) {
-      const fetchedPage = await getAuctionPage(i);
+      const fetchedPage = await hypixelApi.getAuctionPage(i);
       if (fetchedPage) {
         const formattedFetchedPageAuctions = await Promise.all(
           fetchedPage.auctions.map(async (auction) => {
@@ -31,7 +31,6 @@ export async function getAllAuctionItems() {
       }
     }
   }
-  logger.info(`AUCTIONS`, `All auction pages have been fetched!`);
   return auctionItems;
 }
 
@@ -42,6 +41,10 @@ export async function updateAuctionItemPrices(auctionItems: IAuctionItem[]) {
   for (const auctionItem of auctionItems) {
     const itemName = auctionItem.item_name.replace(/§./gm, "");
     if (checkedItemNames.includes(itemName)) continue;
+
+    if(auctionItem.itemData.enchantments.length) {
+      
+    }
 
     const cheapestToExpensiveItems = auctionItems
       .filter(
@@ -91,7 +94,33 @@ export async function updateAuctionItemPrices(auctionItems: IAuctionItem[]) {
 
     checkedItemNames.push(itemName);
   }
-  logger.info(`AUCTIONS`, `All items have been updated in the database!`);
+}
+
+export async function updateBazaarItemPrices(bazaarItems: IBazaarProduct[]) {
+  if (!bazaarItems?.length) return;
+
+  for (const bazaarItem of bazaarItems) {
+    const dupe = await BazaarModel.findOne({
+      itemId: bazaarItem.product_id,
+    });
+    if (dupe) {
+      dupe.sellVolume = bazaarItem.quick_status.sellVolume;
+      dupe.buyVolume = bazaarItem.quick_status.buyVolume;
+      dupe.sellPrice = bazaarItem.quick_status.sellPrice;
+      dupe.buyPrice = bazaarItem.quick_status.buyPrice;
+      dupe.createdAt = new Date();
+      await dupe.save();
+    } else {
+      await BazaarModel.create({
+        itemId: bazaarItem.product_id,
+        sellVolume: bazaarItem.quick_status.sellVolume,
+        buyVolume: bazaarItem.quick_status.buyVolume,
+        sellPrice: bazaarItem.quick_status.sellPrice,
+        buyPrice: bazaarItem.quick_status.buyPrice,
+        createdAt: new Date(),
+      });
+    }
+  }
 }
 
 const parseNbt = promisify(parse);
@@ -103,7 +132,9 @@ export async function parseInventoryData(nbt: string, checkPrice = false) {
   if (!parsedNbt) return [];
   const items = simplify(parsedNbt).i as NBTData[];
   if (!items?.length) return [];
-  return await Promise.all(items.map((item) => Item(item, checkPrice)));
+  return await Promise.all(
+    items.map(async (item) => await Item(item, checkPrice))
+  );
 }
 
 export async function parseItemData(nbt: string, checkPrice = false) {
@@ -122,24 +153,60 @@ export async function parseBackpackData(nbt: number[], checkPrice = false) {
   if (!parsedNbt) return [];
   const items = simplify(parsedNbt).i as NBTData[];
   if (!items?.length) return [];
-  return await Promise.all(items.map((item) => Item(item, checkPrice)));
+  return await Promise.all(
+    items.map(async (item) => await Item(item, checkPrice))
+  );
 }
 
 export async function checkItemPrice(item: IItem) {
   if (item.recombobulated) {
-    const recombobPrice = await getBazaarItemPrice("RECOMBOBULATOR_3000");
-    item.worth += recombobPrice;
+    const recombobPrice = await BazaarModel.findOne({
+      itemId: "RECOMBOBULATOR_3000",
+    });
+    if (recombobPrice?.buyPrice) item.worth += recombobPrice.buyPrice;
   }
 
   if (BAZAAR_ITEM_IDS.includes(item.id)) {
-    const itemPrice = await getBazaarItemPrice(item.id);
-    item.worth += itemPrice * item.amount;
+    const itemPrice = await BazaarModel.findOne({
+      itemId: item.id,
+    });
+    if (itemPrice?.buyPrice) item.worth += itemPrice.buyPrice * item.amount;
   } else {
     const auctionItem = await AuctionModel.findOne({
       itemId: item.id,
     });
     if (auctionItem) {
       item.worth += auctionItem.minimumItemPrice * item.amount;
+    }
+  }
+
+  if (item.hotPotatoCount) {
+    const hotPotatoBookPrice = 10;
+    if (item.hotPotatoCount <= 10) {
+      item.worth += hotPotatoBookPrice * item.hotPotatoCount;
+    } else {
+      const fumingHotPotatoBookPrice = 20;
+      item.worth += hotPotatoBookPrice * 10;
+      item.worth += fumingHotPotatoBookPrice * (item.hotPotatoCount - 10);
+    }
+  }
+
+  if (false) {
+    // item.enchantments.length
+    for (const enchantment of item.enchantments) {
+      const auctionItem = await AuctionModel.findOne({
+        itemName: `${enchantment.enchantName} ${enchantment.enchantLevel}`,
+      });
+      if (auctionItem) {
+        item.worth += auctionItem.minimumItemPrice;
+      }
+    }
+  }
+
+  if (item.backpackItems?.length) {
+    for (const backpackItem of item.backpackItems) {
+      const price = await checkItemPrice(backpackItem);
+      if (price?.worth) item.worth += price.worth;
     }
   }
 
@@ -155,6 +222,7 @@ export async function Item(uItem: NBTData, worth: boolean) {
     recombobulated: false,
     hotPotatoCount: 0,
     enchantments: [],
+    worth: 0,
   };
 
   if (
@@ -206,24 +274,6 @@ export async function Item(uItem: NBTData, worth: boolean) {
       );
   }
 
-  if (worth) {
-    if (item.recombobulated) {
-      const recombobPrice = await getBazaarItemPrice("RECOMBOBULATOR_3000");
-      item.worth += recombobPrice;
-    }
-
-    if (BAZAAR_ITEM_IDS.includes(item.id)) {
-      const itemPrice = await getBazaarItemPrice(item.id);
-      item.worth += itemPrice * item.amount;
-    } else {
-      const auctionItem = await AuctionModel.findOne({
-        itemId: item.id,
-      });
-      if (auctionItem) {
-        item.worth += auctionItem.minimumItemPrice * item.amount;
-      }
-    }
-  }
-
-  return item;
+  if (worth) return await checkItemPrice(item);
+  else return item;
 }

@@ -224,7 +224,7 @@ export interface Profile {
   };
 }
 
-interface IProfileMember {
+export interface IProfileMember {
   last_save: number;
   first_join: number;
   first_join_hub: number;

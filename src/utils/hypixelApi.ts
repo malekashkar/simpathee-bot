@@ -1,5 +1,5 @@
+import { DataResolver } from "discord.js";
 import fetch from "node-fetch";
-import { config as dotenv } from "dotenv";
 import {
   ISkyblockProfilesResponse,
   IGuildResponse,
@@ -7,114 +7,219 @@ import {
   IPlayerActivity,
   IAuctionResponse,
   IBazaarResponse,
-  TBazaarItemIds,
   IPlayerDataResponse,
 } from "./interfaces";
-import { accounts } from "../config";
 
-dotenv();
+export class HypixelAPI {
+  constructor(private apiKey: string) {}
 
-const auctionApiKey = process.env.AUCTION_API_KEY;
+  keyThrottled: boolean;
+  throttleTime: Date;
 
-export async function getAuctionPage(auctionPage = 0) {
-  const request = await fetch(
-    `https://api.hypixel.net/skyblock/auctions?${auctionApiKey}&page=${auctionPage}`
-  );
-  if (!request.ok) return;
+  lastRequest: Date;
+  requestsInMinute: number;
 
-  const response = (await request.json()) as IAuctionResponse;
-  if (response?.auctions?.length) {
-    return response;
+  async getAuctionPage(pageNumber = 0, apiKey = this.apiKey) {
+    if (!this.checkCounters()) {
+      console.log(`API Limit Reached, waiting until the next minute!`);
+      return;
+    }
+
+    const request = await fetch(
+      `https://api.hypixel.net/skyblock/auctions?${apiKey}&page=${pageNumber}`
+    );
+    if (request.status === 429) {
+      this.throttleTime = new Date();
+      this.keyThrottled = true;
+    }
+    if (!request.ok) {
+      console.error(await request.text(), request.statusText);
+      return;
+    }
+
+    const response = (await request.json()) as IAuctionResponse;
+    if (response?.auctions?.length) {
+      return response;
+    }
   }
-}
 
-export async function getBazaarItemPrice(
-  bazaarItem: TBazaarItemIds,
-  apiKey?: string
-) {
-  if (!apiKey)
-    apiKey = accounts[Math.floor(Math.random() * accounts.length)].apiKey;
-  const request = await fetch(
-    `https://api.hypixel.net/skyblock/bazaar?key=${apiKey}`
-  );
-  if (!request.ok) return;
+  async getBazaarItems(apiKey = this.apiKey) {
+    if (!this.checkCounters()) {
+      console.log(`API Limit Reached, waiting until the next minute!`);
+      return;
+    }
 
-  const response = (await request.json()) as IBazaarResponse;
-  if (response.success) {
-    return response.products[bazaarItem]?.quick_status?.sellPrice || 0;
+    const request = await fetch(
+      `https://api.hypixel.net/skyblock/bazaar?key=${apiKey}`
+    );
+    if (request.status === 429) {
+      this.throttleTime = new Date();
+      this.keyThrottled = true;
+    }
+    if (!request.ok) {
+      console.error(await request.text(), request.statusText);
+      return;
+    }
+
+    const response = (await request.json()) as IBazaarResponse;
+    if (response.success) {
+      return Object.values(response.products);
+    }
   }
-}
 
-export async function getGuild(guildId: string, apiKey?: string) {
-  if (!apiKey)
-    apiKey = accounts[Math.floor(Math.random() * accounts.length)].apiKey;
-  const request = await fetch(
-    `https://api.hypixel.net/guild?id=${guildId}&key=${apiKey}`
-  );
-  if (!request.ok) return;
+  async getGuild(guildId: string, apiKey = this.apiKey) {
+    if (!this.checkCounters()) {
+      console.log(`API Limit Reached, waiting until the next minute!`);
+      return;
+    }
 
-  const response = (await request.json()) as IGuildResponse;
-  if (response.success && response.guild) {
-    return response.guild;
+    const request = await fetch(
+      `https://api.hypixel.net/guild?id=${guildId}&key=${apiKey}`
+    );
+    if (request.status === 429) {
+      this.throttleTime = new Date();
+      this.keyThrottled = true;
+    }
+    if (!request.ok) {
+      console.error(await request.text(), request.statusText);
+      return;
+    }
+
+    const response = (await request.json()) as IGuildResponse;
+    if (response.success && response.guild) {
+      return response.guild;
+    }
   }
-}
 
-export async function getPlayerActivity(playerUuid: string, apiKey?: string) {
-  if (!apiKey)
-    apiKey = accounts[Math.floor(Math.random() * accounts.length)].apiKey;
-  const request = await fetch(
-    `https://api.hypixel.net/status?uuid=${playerUuid}&key=${apiKey}`
-  );
-  if (!request.ok) return;
+  async getPlayerActivity(playerUuid: string, apiKey = this.apiKey) {
+    if (!this.checkCounters()) {
+      console.log(`API Limit Reached, waiting until the next minute!`);
+      return;
+    }
 
-  const response = (await request.json()) as IPlayerActivity;
-  if (response.success && response.session) {
-    return response;
+    const request = await fetch(
+      `https://api.hypixel.net/status?uuid=${playerUuid}&key=${apiKey}`
+    );
+    if (request.status === 429) {
+      this.throttleTime = new Date();
+      this.keyThrottled = true;
+    }
+    if (!request.ok) {
+      console.error(await request.text(), request.statusText);
+      return;
+    }
+
+    const response = (await request.json()) as IPlayerActivity;
+    if (response.success && response.session) {
+      return response;
+    }
   }
-}
 
-export async function getSkyblockProfile(playerUuid: string, apiKey?: string) {
-  if (!apiKey)
-    apiKey = accounts[Math.floor(Math.random() * accounts.length)].apiKey;
-  const request = await fetch(
-    `https://api.hypixel.net/skyblock/profiles?key=${apiKey}&uuid=${playerUuid}`
-  );
-  if (!request.ok) return;
+  async getSkyblockProfile(playerUuid: string, apiKey = this.apiKey) {
+    if (!this.checkCounters()) {
+      console.log(`API Limit Reached, waiting until the next minute!`);
+      return;
+    }
 
-  const response = (await request.json()) as ISkyblockProfilesResponse;
-  if (response) return response.profiles;
-}
+    const request = await fetch(
+      `https://api.hypixel.net/skyblock/profiles?key=${apiKey}&uuid=${playerUuid}`
+    );
+    if (request.status === 429) {
+      this.throttleTime = new Date();
+      this.keyThrottled = true;
+    }
+    if (!request.ok) {
+      console.error(await request.text(), request.statusText);
+      return;
+    }
 
-export async function getHypixelPlayer(playerUuid: string, apiKey?: string) {
-  if (!apiKey)
-    apiKey = accounts[Math.floor(Math.random() * accounts.length)].apiKey;
-  const request = await fetch(
-    `https://api.hypixel.net/player?key=${apiKey}&uuid=${playerUuid}`
-  );
-  if (!request.ok) return;
-
-  const response = (await request.json()) as IPlayerDataResponse;
-  if (response?.player) return response.player;
-}
-
-export async function uuidToUsername(playerUuid: string) {
-  const request = await fetch(
-    `https://api.mojang.com/user/profiles/${playerUuid}/names`
-  );
-  if (!request.ok) return;
-
-  const response = await request.json();
-  if (response.length) {
-    return response[response.length - 1].name;
+    const response = (await request.json()) as ISkyblockProfilesResponse;
+    if (response) return response.profiles;
   }
-}
 
-export async function getMojangProfile(playerName: string) {
-  const request = await fetch(
-    `https://api.mojang.com/users/profiles/minecraft/${playerName}`
-  );
-  if (request.status !== 200) return;
+  async getHypixelPlayer(playerUuid: string, apiKey = this.apiKey) {
+    if (!this.checkCounters()) {
+      console.log(`API Limit Reached, waiting until the next minute!`);
+      return;
+    }
 
-  const response = (await request.json()) as IMojangProfileResponse;
-  if (response) return response;
+    const request = await fetch(
+      `https://api.hypixel.net/player?key=${apiKey}&uuid=${playerUuid}`
+    );
+    if (request.status === 429) {
+      this.throttleTime = new Date();
+      this.keyThrottled = true;
+    }
+    if (!request.ok) {
+      console.error(await request.text(), request.statusText);
+      return;
+    }
+
+    const response = (await request.json()) as IPlayerDataResponse;
+    if (response?.player) return response.player;
+  }
+
+  async playerUuidToUsername(playerUuid: string) {
+    const request = await fetch(
+      `https://api.mojang.com/user/profiles/${playerUuid}/names`
+    );
+    if (!request.ok) {
+      console.error(await request.text(), request.statusText);
+      return;
+    }
+
+    const response = await request.json();
+    if (response.length) {
+      return response[response.length - 1].name;
+    }
+  }
+
+  async getMojangProfile(playerName: string) {
+    const request = await fetch(
+      `https://api.mojang.com/users/profiles/minecraft/${playerName}`
+    );
+    if (request.status !== 200) {
+      console.error(await request.text(), request.statusText);
+      return;
+    }
+
+    const response = (await request.json()) as IMojangProfileResponse;
+    if (response) return response;
+  }
+
+  checkCounters() {
+    const requestLimitPerMinute = 100;
+
+    if (!this.keyThrottled && !this.throttleTime) {
+      if (!this.lastRequest || !this.requestsInMinute) {
+        this.lastRequest = new Date();
+        this.requestsInMinute = 1;
+      } else if (
+        new Date().getTime() - this.lastRequest.getTime() <= 60e3 &&
+        this.requestsInMinute < requestLimitPerMinute
+      ) {
+        this.lastRequest = new Date();
+        this.requestsInMinute += 1;
+      } else if (
+        new Date().getTime() - this.lastRequest.getTime() > 60e3 &&
+        this.requestsInMinute < requestLimitPerMinute
+      ) {
+        this.lastRequest = new Date();
+        this.requestsInMinute = 1;
+      } else if (
+        this.requestsInMinute >= requestLimitPerMinute &&
+        new Date().getTime() - this.lastRequest.getTime() <= 60e3
+      ) {
+        console.log(`Requsts in last minute detected`);
+        return false;
+      }
+    } else if (new Date().getTime() - this.throttleTime.getTime() < 60e3) {
+      console.log(`Key Throttled I guess?`);
+      return false;
+    } else {
+      this.keyThrottled = undefined;
+      this.throttleTime = undefined;
+    }
+    return true;
+  }
 }

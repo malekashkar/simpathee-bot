@@ -2,14 +2,10 @@ import { Message } from "discord.js";
 import Command from ".";
 import { commafyNumber, minifyNumber } from "../utils";
 import embeds from "../utils/embeds";
-import { checkItemPrice, parseInventoryData } from "../utils/hypixel";
-import {
-  getBazaarItemPrice,
-  getMojangProfile,
-  getSkyblockProfile,
-} from "../utils/hypixelApi";
+import { parseInventoryData } from "../utils/hypixel";
 import { IItem } from "../utils/interfaces";
 import { config as dotenv } from "dotenv";
+import { BazaarModel } from "../models/bazaarItem";
 
 dotenv();
 
@@ -25,13 +21,13 @@ export default class NetworthCommand extends Command {
         embeds.error(`Please provide a player username!`)
       );
 
-    const mojangProfile = await getMojangProfile(username);
+    const mojangProfile = await this.client.hypixel.getMojangProfile(username);
     if (!mojangProfile)
       return message.channel.send(
         embeds.error(`The username doesn't seem to be a valid MC username.`)
       );
 
-    const skyblockProfiles = await getSkyblockProfile(
+    const skyblockProfiles = await this.client.hypixel.getSkyblockProfile(
       mojangProfile.id,
       process.env.COMMANDS_API_KEY
     );
@@ -51,7 +47,7 @@ export default class NetworthCommand extends Command {
         return -1;
       else return 1;
     })[0];
-    
+
     const memberProfile = latestProfile.members[mojangProfile.id];
     const inventoryContent = await parseInventoryData(
       memberProfile.inv_contents.data,
@@ -72,7 +68,7 @@ export default class NetworthCommand extends Command {
     const wardrobeWorth = wardrobeContent.reduce((a, b) => a + b.worth, 0);
 
     const talismanContent = await parseInventoryData(
-      memberProfile.wardrobe_contents.data,
+      memberProfile.talisman_bag.data,
       true
     );
     const talismanWorth = talismanContent.reduce((a, b) => a + b.worth, 0);
@@ -83,18 +79,11 @@ export default class NetworthCommand extends Command {
     );
     const armorWorth = armorContent.reduce((a, b) => a + b.worth, 0);
 
-    const petContent = await parseInventoryData(
-      memberProfile.inv_armor.data,
-      true
-    );
-    const petWorth = petContent.reduce((a, b) => a + b.worth, 0);
-
     const totalNetworth =
       enderchestWorth +
         inventoryWorth +
         armorWorth +
         wardrobeWorth +
-        petWorth +
         talismanWorth +
         memberProfile.coin_purse +
         latestProfile.banking?.balance || 0;
@@ -155,8 +144,8 @@ export default class NetworthCommand extends Command {
             inline: false,
           },
           {
-            name: `Pet's Value (${minifyNumber(petWorth)})`,
-            value: formatTop5Items(petContent),
+            name: `Pet's Value (${minifyNumber(0)})`,
+            value: `Temp`,
             inline: false,
           },
           {
@@ -190,15 +179,12 @@ function formatTop5Items(allItems: IItem[]) {
 }
 
 async function realLifeNetworth(num: number) {
-  const currentBoosterCookieIngamePrice = await getBazaarItemPrice(
-    "BOOSTER_COOKIE"
-  );
+  const boosterCookiePrice = await BazaarModel.findOne({
+    itemId: "BOOSTER_COOKIE",
+  });
   const boosterCookieIrlPrice = 2.75;
   const irlPricePerMil = Number(
-    (
-      boosterCookieIrlPrice /
-      (currentBoosterCookieIngamePrice / 1000000)
-    ).toFixed(2)
+    (boosterCookieIrlPrice / (boosterCookiePrice.buyPrice / 1000000)).toFixed(2)
   );
   return Number((irlPricePerMil * (num / 1000000)).toFixed(2));
 }
