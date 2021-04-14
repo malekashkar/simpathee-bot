@@ -8,8 +8,6 @@ import { HypixelAPI } from "./hypixelApi";
 import { IItem, IProfileMember } from "./interfaces";
 import Logger from "./logger";
 
-const mineflayerViewer = require("prismarine-viewer").mineflayer;
-
 type Player = { username: string; uuid: string };
 
 export default class Scraper {
@@ -36,8 +34,6 @@ export default class Scraper {
 
   async process() {
     this.bot.once("spawn", async () => {
-      mineflayerViewer(this.bot, { port: 3007, firstPerson: false });
-
       Logger.info(
         `SCRAPING`,
         `Started scraping process on ${this.bot.username}.`
