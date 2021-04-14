@@ -28,8 +28,7 @@ export default class NetworthCommand extends Command {
       );
 
     const skyblockProfiles = await this.client.hypixel.getSkyblockProfile(
-      mojangProfile.id,
-      process.env.COMMANDS_API_KEY
+      mojangProfile.id
     );
     if (!skyblockProfiles)
       return message.channel.send(
