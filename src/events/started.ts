@@ -10,6 +10,8 @@ import { TimestampModel } from "../models/timestamp";
 import { accounts } from "../config";
 import { HypixelAPI } from "../utils/hypixelApi";
 import Scraper from "../utils/scraper";
+import { Archived, ArchivedModel } from "../models/archived";
+import { AccountModel } from "../models/account";
 
 dotenv();
 
@@ -24,7 +26,11 @@ export default class Started extends Event {
     setInterval(async () => {
       await auctionUpdater(this.client.hypixel);
       await bazaarUpdater(this.client.hypixel);
-    }, 60 * 60 * 1000);
+    }, 60 * 60e3);
+
+    setInterval(async () => {
+      await accountArchiver();
+    }, 10 * 60e3);
 
     if (process.env.NODE_ENV === "production") {
       for (let i = 0; i < 5; i++) {
@@ -35,6 +41,42 @@ export default class Started extends Event {
         );
       }
     }
+  }
+}
+
+async function accountArchiver() {
+  const accountsLastUpdate = await TimestampModel.findOne({
+    category: "ACCOUNTS_LAST_PURGE",
+  });
+
+  if (
+    !accountsLastUpdate ||
+    accountsLastUpdate?.lastTime + 30 * 60e3 <= Date.now()
+  ) {
+    const outdatedAccounts = await AccountModel.find({
+      createdAt: { $lte: new Date(Date.now() - 30 * 60e3) },
+    });
+    await AccountModel.deleteMany({
+      _id: { $in: outdatedAccounts.map((x) => x._id) },
+    });
+
+    for (const outdatedAccount of outdatedAccounts) {
+      await ArchivedModel.create({
+        username: outdatedAccount.username,
+        itemName: outdatedAccount.itemName,
+      });
+    }
+    logger.info(`ACCOUNTS`, `Outdated Accounts Cleared.`);
+  }
+
+  if (accountsLastUpdate?.lastTime + 30 * 60e3 <= Date.now()) {
+    accountsLastUpdate.lastTime = Date.now();
+    await accountsLastUpdate.save();
+  } else if (!accountsLastUpdate) {
+    await TimestampModel.create({
+      category: "ACCOUNTS_LAST_PURGE",
+      lastTime: Date.now(),
+    });
   }
 }
 

@@ -231,12 +231,14 @@ export default class Scraper {
   }
 
   async teleportDungeonHub() {
-    await sleep(3000);
+    await sleep(5000);
     this.bot.chat("/skyblock");
-    await sleep(3000);
+    await sleep(5000);
+    this.bot.chat("/skyblock");
+    await sleep(5000);
     this.bot.chat("/warp hub");
-    await sleep(3000);
+    await sleep(5000);
     this.bot.chat("/warp dungeon_hub");
-    await sleep(3000);
+    await sleep(5000);
   }
 }
