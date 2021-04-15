@@ -3,8 +3,8 @@ import Command from ".";
 import config from "../config";
 import { AccountModel } from "../models/account";
 import embeds from "../utils/embeds";
-import moment from "moment";
 import { ArchivedModel } from "../models/archived";
+import _ from "lodash";
 
 export default class LeafCommand extends Command {
   cmdName = "leaf";
@@ -14,18 +14,19 @@ export default class LeafCommand extends Command {
     if (message.channel.id === config.leafChannelId) {
       const accounts = await AccountModel.find().limit(3);
       if (accounts?.length) {
+        const formattedAccounts = accounts
+          .map(
+            (account, i) =>
+              `${i + 1} **${account.username}** | __${account.items.join(
+                ", "
+              )}__`
+          )
+          .join("\n");
         await message.channel.send(
           message.author.toString(),
           embeds.normal(
             `${message.author.username}'s Leaf List`,
-            accounts
-              .map(
-                (account, i) =>
-                  `${i + 1} **${account.username}** | __${
-                    account.itemName
-                  }__ (${moment(account.createdAt).format("lll")})`
-              )
-              .join("\n")
+            formattedAccounts
           )
         );
 
@@ -49,12 +50,24 @@ export default class LeafCommand extends Command {
         }
 
         // Move the accounts into archived
+        await AccountModel.deleteMany({
+          _id: { $in: accounts.map((x) => x._id) },
+        });
         for (const account of accounts) {
-          await account.deleteOne();
-          await ArchivedModel.create({
+          const archivedDocument = await ArchivedModel.findOne({
             username: account.username,
-            itemName: account.itemName,
           });
+          if (archivedDocument) {
+            archivedDocument.items = _.uniq(
+              account.items.concat(archivedDocument.items)
+            );
+            await archivedDocument.save();
+          } else {
+            await ArchivedModel.create({
+              username: account.username,
+              items: account.items,
+            });
+          }
         }
       } else {
         message.channel.send(

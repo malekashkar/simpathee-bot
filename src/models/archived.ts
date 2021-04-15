@@ -1,11 +1,11 @@
 import { getModelForClass, prop } from "@typegoose/typegoose";
 
 export class Archived {
-  @prop()
+  @prop({ unique: true })
   username: string;
 
-  @prop()
-  itemName: string;
+  @prop({ type: String, default: [] })
+  items: string[];
 }
 
 export const ArchivedModel = getModelForClass(Archived);

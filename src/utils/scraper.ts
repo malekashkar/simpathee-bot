@@ -1,8 +1,9 @@
+import { DocumentType } from "@typegoose/typegoose";
 import Mineflayer from "mineflayer";
 import { sleep } from ".";
 import { validArmor, validWeapons } from "../config";
-import { AccountModel } from "../models/account";
-import { ArchivedModel } from "../models/archived";
+import { Account, AccountModel } from "../models/account";
+import { Archived, ArchivedModel } from "../models/archived";
 import { parseInventoryData } from "./hypixel";
 import { HypixelAPI } from "./hypixelApi";
 import { IItem, IProfileMember } from "./interfaces";
@@ -189,23 +190,36 @@ export default class Scraper {
 
   async processPlayerItems(playerUsername: string, playerItems: IItem[]) {
     for (const item of playerItems) {
-      const accountDuplicate = await AccountModel.findOne({
-        username: playerUsername,
-        itemName: item.displayName,
-      });
-      const archivedDuplicate = await ArchivedModel.findOne({
-        username: playerUsername,
-        itemName: item.displayName,
-      });
+      const accountDuplicate = await AccountModel.findOne([
+        {
+          username: playerUsername,
+          items: { $in: [item.displayName] },
+        },
+      ]);
+      const archivedDuplicate = await ArchivedModel.findOne([
+        {
+          username: playerUsername,
+          items: { $in: [item.displayName] },
+        },
+      ]);
 
-      if (!archivedDuplicate && !accountDuplicate) {
-        Logger.info(`HIT`, `${playerUsername} | ${item.displayName}`);
+      if (accountDuplicate || archivedDuplicate) continue;
+
+      const accountModel = await AccountModel.findOne({
+        username: playerUsername,
+      });
+      if (accountModel) {
+        accountModel.items.push(item.displayName);
+        await accountModel.save();
+      } else {
         await AccountModel.create({
           username: playerUsername,
-          itemName: item.displayName,
+          items: [item.displayName],
           createdAt: new Date(),
         });
       }
+
+      Logger.info(`HIT`, `${playerUsername} | ${item.displayName}`);
     }
   }
 

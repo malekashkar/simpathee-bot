@@ -1,11 +1,11 @@
 import { getModelForClass, prop } from "@typegoose/typegoose";
 
 export class Account {
-  @prop()
+  @prop({ unique: true })
   username: string;
 
-  @prop()
-  itemName: string;
+  @prop({ type: String, default: [] })
+  items: string[];
 
   @prop()
   createdAt: Date;

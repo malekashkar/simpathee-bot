@@ -63,7 +63,7 @@ async function accountArchiver() {
     for (const outdatedAccount of outdatedAccounts) {
       await ArchivedModel.create({
         username: outdatedAccount.username,
-        itemName: outdatedAccount.itemName,
+        items: outdatedAccount.items,
       });
     }
     logger.info(`ACCOUNTS`, `Outdated Accounts Cleared.`);
