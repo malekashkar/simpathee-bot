@@ -190,24 +190,21 @@ export default class Scraper {
 
   async processPlayerItems(playerUsername: string, playerItems: IItem[]) {
     for (const item of playerItems) {
-      const accountDuplicate = await AccountModel.findOne([
-        {
-          username: playerUsername,
-          items: { $in: [item.displayName] },
-        },
-      ]);
-      const archivedDuplicate = await ArchivedModel.findOne([
-        {
-          username: playerUsername,
-          items: { $in: [item.displayName] },
-        },
-      ]);
-
-      if (accountDuplicate || archivedDuplicate) continue;
-
       const accountModel = await AccountModel.findOne({
         username: playerUsername,
       });
+      const archivedModel = await ArchivedModel.findOne({
+        username: playerUsername,
+      });
+
+      if (
+        (accountModel?.items.length &&
+          accountModel?.items?.includes(item.displayName)) ||
+        (archivedModel?.items.length &&
+          archivedModel?.items?.includes(item.displayName))
+      )
+        continue;
+
       if (accountModel) {
         accountModel.items.push(item.displayName);
         await accountModel.save();

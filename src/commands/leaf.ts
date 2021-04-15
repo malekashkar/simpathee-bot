@@ -17,11 +17,9 @@ export default class LeafCommand extends Command {
         const formattedAccounts = accounts
           .map(
             (account, i) =>
-              `${i + 1} **${account.username}** | __${account.items.join(
-                ", "
-              )}__`
+              `**${account.username}**\n${account.items.join("\n")}`
           )
-          .join("\n");
+          .join("\n\n");
         await message.channel.send(
           message.author.toString(),
           embeds.normal(
