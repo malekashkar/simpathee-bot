@@ -12,9 +12,9 @@ export default class LeafCommand extends Command {
 
   async run(message: Message) {
     if (message.channel.id === config.channels.leafCommands) {
-      const accounts = await AccountModel.find().limit(
-        config.leafAccountsAmount
-      );
+      const accounts = await AccountModel.find({
+        createdAt: { $lte: new Date(Date.now() - 30 * 60e3) },
+      }).limit(config.leafAccountsAmount);
       if (accounts?.length) {
         const accountsLeft = await AccountModel.countDocuments();
         const leafMessage = await message.channel.send(
