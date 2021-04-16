@@ -11,9 +11,7 @@ export default {
     leafCuts: "832422414402453554",
   },
   emojis: {
-    one: "1️⃣",
-    two: "2️⃣",
-    three: "3️⃣",
+    numbers: ["1️⃣", "2️⃣", "3️⃣"],
     leafHit: "🟩",
     leafFail: "🟥",
   },

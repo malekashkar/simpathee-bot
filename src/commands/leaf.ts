@@ -34,18 +34,14 @@ export default class LeafCommand extends Command {
             .setFooter(`${accountsLeft} Players Left`)
         );
 
-        await leafMessage.react(config.emojis.one);
-        await leafMessage.react(config.emojis.two);
-        await leafMessage.react(config.emojis.three);
+        for (let i = 0; i < accounts.length; i++) {
+          await leafMessage.react(config.emojis.numbers[i]);
+        }
 
         await LeafMessageModel.create({
           authorId: message.author.id,
           messageId: leafMessage.id,
-          usernames: accounts.map((account) => account.username),
-          baseMessage: {
-            content: leafMessage.content,
-            embed: leafMessage.embeds[0],
-          },
+          users: accounts,
         });
 
         await AccountModel.deleteMany({

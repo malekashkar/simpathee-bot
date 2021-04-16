@@ -10,7 +10,6 @@ import { TimestampModel } from "../models/timestamp";
 import { accounts } from "../config";
 import { HypixelAPI } from "../utils/hypixelApi";
 import Scraper from "../utils/scraper";
-import { ArchivedModel } from "../models/archived";
 import { AccountModel } from "../models/account";
 
 dotenv();
@@ -21,15 +20,15 @@ export default class Started extends Event {
   async handle() {
     logger.info("BOT", "The bot has started!");
 
-    await bazaarUpdater(this.client.hypixel);
-    await auctionUpdater(this.client.hypixel);
-    setInterval(async () => {
-      await auctionUpdater(this.client.hypixel);
-      await bazaarUpdater(this.client.hypixel);
+    bazaarUpdater(this.client.hypixel);
+    auctionUpdater(this.client.hypixel);
+    setInterval(() => {
+      auctionUpdater(this.client.hypixel);
+      bazaarUpdater(this.client.hypixel);
     }, 60 * 60e3);
 
-    setInterval(async () => {
-      await accountArchiver();
+    setInterval(() => {
+      accountArchiver();
     }, 5 * 60e3);
 
     if (process.env.NODE_ENV === "production") {

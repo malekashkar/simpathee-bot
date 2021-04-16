@@ -1,26 +1,22 @@
 import { getModelForClass, prop } from "@typegoose/typegoose";
-import { MessageEmbed } from "discord.js";
 
-export class BaseMessage {
-  @prop()
-  content: string;
+export class LeafUser {
+  @prop({ unique: true })
+  username: string;
 
-  @prop()
-  embed: MessageEmbed;
+  @prop({ type: String, default: [] })
+  items: string[];
 }
 
 export class LeafMessage {
   @prop()
   authorId: string;
-  
+
   @prop()
   messageId: string;
 
-  @prop({ type: String, default: [] })
-  usernames: string[];
-
-  @prop({ type: BaseMessage, default: {} })
-  baseMessage: BaseMessage;
+  @prop({ type: LeafUser, default: [] })
+  users: LeafUser[];
 
   @prop()
   username?: string;

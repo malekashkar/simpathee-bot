@@ -2,6 +2,7 @@ import { stripIndents } from "common-tags";
 import { MessageReaction, TextChannel, User } from "discord.js";
 import Event, { EventNameType } from ".";
 import config from "../config";
+import { AccountModel } from "../models/account";
 import { BlacklistedModel } from "../models/blacklisted";
 import { LeafMessageModel } from "../models/leafMessage";
 import embeds from "../utils/embeds";
@@ -18,30 +19,26 @@ export default class LeafReactions extends Event {
       messageId: message.id,
     });
     if (leafMessageDoc) {
-      if (
-        [config.emojis.one, config.emojis.two, config.emojis.three].includes(
-          reaction.emoji.name
-        )
-      ) {
-        if (leafMessageDoc?.usernames?.length) {
+      if (config.emojis.numbers.includes(reaction.emoji.name)) {
+        if (leafMessageDoc?.users?.length) {
           const username =
-            reaction.emoji.name === config.emojis.one
-              ? leafMessageDoc.usernames[0]
-              : reaction.emoji.name === config.emojis.two
-              ? leafMessageDoc.usernames[1]
-              : reaction.emoji.name === config.emojis.three
-              ? leafMessageDoc.usernames[2]
-              : null;
+            leafMessageDoc.users[
+              config.emojis.numbers.indexOf(reaction.emoji.name)
+            ]?.username;
           if (username) {
-            await message.reactions.removeAll();
-            await message.react(config.emojis.leafHit);
-            await message.react(config.emojis.leafFail);
             await message.edit(
               embeds.normal(
                 `Leaf Question`,
                 stripIndents`Click ${config.emojis.leafHit} if you successfully hit \`${username}\`.
                     Click ${config.emojis.leafFail} if you failed hitting \`${username}\`.`
               )
+            );
+            await message.reactions.removeAll();
+            await message.react(config.emojis.leafHit);
+            await message.react(config.emojis.leafFail);
+
+            leafMessageDoc.users = leafMessageDoc.users.filter(
+              (leafUser) => leafUser.username !== username
             );
             leafMessageDoc.username = username;
             await leafMessageDoc.save();
@@ -64,24 +61,45 @@ export default class LeafReactions extends Event {
           });
         }
 
-        await message.edit(
-          leafMessageDoc.baseMessage.content,
-          leafMessageDoc.baseMessage.embed
-        );
-        await message.reactions.removeAll();
-        await message.react(config.emojis.one);
-        await message.react(config.emojis.two);
-        await message.react(config.emojis.three);
+        if (reaction.emoji.name === config.emojis.leafHit) {
+          const cutsChannel = message.guild.channels.resolve(
+            config.channels.leafCuts
+          ) as TextChannel;
+          await cutsChannel.send(
+            embeds.normal(
+              `Leaf Success`,
+              `${user} successfully hit the player \`${leafMessageDoc.username}\``
+            )
+          );
+        }
 
-        const cutsChannel = message.guild.channels.resolve(
-          config.channels.leafCuts
-        ) as TextChannel;
-        await cutsChannel.send(
-          embeds.normal(
-            `Leaf Success`,
-            `${user} successfully hit the player \`${leafMessageDoc.username}\``
-          )
-        );
+        if (leafMessageDoc.users.length) {
+          const accountsLeft = await AccountModel.countDocuments();
+          const baseEmbed = embeds
+            .empty()
+            .setTitle(`${user.username}'s Leaf List`)
+            .addFields(
+              leafMessageDoc.users.map((account, i) => {
+                return {
+                  name: `${i + 1}. ${account.username}`,
+                  value: account.items.join("\n"),
+                  inline: false,
+                };
+              })
+            )
+            .setFooter(`${accountsLeft} Players Left`);
+          await message.edit(baseEmbed);
+          await message.reactions.removeAll();
+          for (let i = 0; i < leafMessageDoc.users.length; i++) {
+            await message.react(config.emojis.numbers[i]);
+          }
+
+          leafMessageDoc.username = null;
+          await leafMessageDoc.save();
+        } else {
+          await message.delete();
+          await leafMessageDoc.deleteOne();
+        }
       }
     }
   }
