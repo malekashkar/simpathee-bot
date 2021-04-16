@@ -2,11 +2,21 @@ export default {
   prefix: "!",
   testingPrefix: "?",
   ingameGuildId: "60392ba18ea8c9e50dd62cb4",
+  leafAccountsAmount: 3,
   redisCooldowns: {
     guildMemberStatus: 10 * 60 * 1000,
   },
-  leafChannelId: "825809615035170896",
-  leafLogChannelId: "826504095430344744",
+  channels: {
+    leafCommands: "825809615035170896",
+    leafCuts: "832422414402453554",
+  },
+  emojis: {
+    one: "1️⃣",
+    two: "2️⃣",
+    three: "3️⃣",
+    leafHit: "🟩",
+    leafFail: "🟥",
+  },
 };
 
 export const validWeapons = [
