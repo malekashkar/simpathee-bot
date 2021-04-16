@@ -1,9 +1,8 @@
-import { Message, TextChannel } from "discord.js";
+import { Message } from "discord.js";
 import Command from ".";
 import config from "../config";
 import { AccountModel } from "../models/account";
 import embeds from "../utils/embeds";
-import { ArchivedModel } from "../models/archived";
 import _ from "lodash";
 
 export default class LeafCommand extends Command {
@@ -35,26 +34,6 @@ export default class LeafCommand extends Command {
         await AccountModel.deleteMany({
           _id: { $in: accounts.map((x) => x._id) },
         });
-
-        /*
-        const shortFormattedAccounts = accounts
-          .map((account) => account.username)
-          .join(", ");
-        const leafLogChannel = message.guild.channels.resolve(
-          config.leafLogChannelId
-        ) as TextChannel;
-        if (leafLogChannel) {
-          leafLogChannel.send(
-            embeds
-              .normal(
-                `Leaf Logs`,
-                `${message.author} pulled the accounts **${shortFormattedAccounts}**.`
-              )
-              .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-              .setFooter(`${accountsLeft} Players Left`)
-          );
-        }
-        */
       } else {
         message.channel.send(
           embeds.error(

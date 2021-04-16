@@ -30,7 +30,7 @@ export default class Started extends Event {
 
     setInterval(async () => {
       await accountArchiver();
-    }, 10 * 60e3);
+    }, 5 * 60e3);
 
     if (process.env.NODE_ENV === "production") {
       for (let i = 0; i < 5; i++) {
@@ -54,19 +54,9 @@ async function accountArchiver() {
     !accountsLastUpdate ||
     accountsLastUpdate?.lastTime + 30 * 60e3 <= Date.now()
   ) {
-    const outdatedAccounts = await AccountModel.find({
+    await AccountModel.deleteMany({
       createdAt: { $lte: new Date(Date.now() - 30 * 60e3) },
     });
-    await AccountModel.deleteMany({
-      _id: { $in: outdatedAccounts.map((x) => x._id) },
-    });
-
-    for (const outdatedAccount of outdatedAccounts) {
-      await ArchivedModel.create({
-        username: outdatedAccount.username,
-        items: outdatedAccount.items,
-      });
-    }
     logger.info(`ACCOUNTS`, `Outdated Accounts Cleared.`);
   }
 
