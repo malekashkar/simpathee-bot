@@ -16,7 +16,9 @@ export default class LeafCommand extends Command {
         createdAt: { $lte: new Date(Date.now() - 30 * 60e3) },
       }).limit(config.leafAccountsAmount);
       if (accounts?.length) {
-        const accountsLeft = await AccountModel.countDocuments();
+        const accountsLeft = await AccountModel.countDocuments({
+          createdAt: { $lte: new Date(Date.now() - 30 * 60e3) },
+        });
         const leafMessage = await message.channel.send(
           message.author.toString(),
           embeds
