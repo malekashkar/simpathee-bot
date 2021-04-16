@@ -16,6 +16,7 @@ import Redis from "ioredis";
 import config from "./config";
 import embeds from "./utils/embeds";
 import { HypixelAPI } from "./utils/hypixelApi";
+import Scraper from "./utils/scraper";
 
 dotenv();
 
@@ -25,6 +26,8 @@ export default class Client extends DiscordClient {
 
   redis = new Redis();
   hypixel = new HypixelAPI(process.env.HYPIXEL_API_KEY);
+
+  bots: Scraper[] = [];
 
   constructor(options?: ClientOptions) {
     super({

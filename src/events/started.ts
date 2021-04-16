@@ -10,7 +10,7 @@ import { TimestampModel } from "../models/timestamp";
 import { accounts } from "../config";
 import { HypixelAPI } from "../utils/hypixelApi";
 import Scraper from "../utils/scraper";
-import { Archived, ArchivedModel } from "../models/archived";
+import { ArchivedModel } from "../models/archived";
 import { AccountModel } from "../models/account";
 
 dotenv();
@@ -34,11 +34,12 @@ export default class Started extends Event {
 
     if (process.env.NODE_ENV === "production") {
       for (let i = 0; i < 5; i++) {
-        new Scraper(
+        const bot = new Scraper(
           accounts[i].email,
           accounts[i].password,
           accounts[i].apiKey
         );
+        this.client.bots.push(bot);
       }
     }
   }

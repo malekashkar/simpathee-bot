@@ -14,21 +14,29 @@ export default class LeafCommand extends Command {
     if (message.channel.id === config.leafChannelId) {
       const accounts = await AccountModel.find().limit(3);
       if (accounts?.length) {
-        const formattedAccounts = accounts
-          .map(
-            (account, i) =>
-              `**${account.username}**\n${account.items.join("\n")}`
-          )
-          .join("\n\n");
+        const accountsLeft = await AccountModel.countDocuments();
         await message.channel.send(
           message.author.toString(),
-          embeds.normal(
-            `${message.author.username}'s Leaf List`,
-            formattedAccounts
-          )
+          embeds
+            .empty()
+            .setTitle(`${message.author.username}'s Leaf List`)
+            .addFields(
+              accounts.map((account) => {
+                return {
+                  name: account.username,
+                  value: account.items.join("\n"),
+                  inline: false,
+                };
+              })
+            )
+            .setFooter(`${accountsLeft} Players Left`)
         );
 
-        const accountsLeft = await AccountModel.countDocuments();
+        await AccountModel.deleteMany({
+          _id: { $in: accounts.map((x) => x._id) },
+        });
+
+        /*
         const shortFormattedAccounts = accounts
           .map((account) => account.username)
           .join(", ");
@@ -43,30 +51,10 @@ export default class LeafCommand extends Command {
                 `${message.author} pulled the accounts **${shortFormattedAccounts}**.`
               )
               .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-              .setFooter(`${accountsLeft} Usernames Left`)
+              .setFooter(`${accountsLeft} Players Left`)
           );
         }
-
-        // Move the accounts into archived
-        await AccountModel.deleteMany({
-          _id: { $in: accounts.map((x) => x._id) },
-        });
-        for (const account of accounts) {
-          const archivedDocument = await ArchivedModel.findOne({
-            username: account.username,
-          });
-          if (archivedDocument) {
-            archivedDocument.items = _.uniq(
-              account.items.concat(archivedDocument.items)
-            );
-            await archivedDocument.save();
-          } else {
-            await ArchivedModel.create({
-              username: account.username,
-              items: account.items,
-            });
-          }
-        }
+        */
       } else {
         message.channel.send(
           embeds.error(

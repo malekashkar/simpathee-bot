@@ -1,9 +1,8 @@
-import { DocumentType } from "@typegoose/typegoose";
 import Mineflayer from "mineflayer";
 import { sleep } from ".";
 import { validArmor, validWeapons } from "../config";
-import { Account, AccountModel } from "../models/account";
-import { Archived, ArchivedModel } from "../models/archived";
+import { AccountModel } from "../models/account";
+import { ArchivedModel } from "../models/archived";
 import { parseInventoryData } from "./hypixel";
 import { HypixelAPI } from "./hypixelApi";
 import { IItem, IProfileMember } from "./interfaces";
