@@ -1,11 +1,12 @@
 import { Message } from "discord.js";
 import Command from ".";
 import config from "../config";
-import { AccountModel } from "../models/account";
+import { Account, AccountModel } from "../models/account";
 import embeds from "../utils/embeds";
 import _ from "lodash";
 import { LeafMessageModel } from "../models/leafMessage";
 import moment from "moment";
+import { DocumentType } from "@typegoose/typegoose";
 
 export default class LeafCommand extends Command {
   cmdName = "leaf";
@@ -13,9 +14,12 @@ export default class LeafCommand extends Command {
 
   async run(message: Message) {
     if (message.channel.id === config.channels.leafCommands) {
-      const accounts = await AccountModel.find({
-        createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
-      }).limit(config.leafAccountsAmount);
+      const accounts: DocumentType<Account>[] = await AccountModel.aggregate([
+        {
+          $match: { createdAt: { $gte: new Date(Date.now() - 30 * 60e3) } },
+        },
+        { $sort: { createdAt: -1 } },
+      ]).limit(config.leafAccountsAmount);
       if (accounts?.length) {
         await AccountModel.deleteMany({
           _id: { $in: accounts.map((x) => x._id) },
