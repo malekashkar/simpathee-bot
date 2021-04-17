@@ -5,6 +5,7 @@ import { AccountModel } from "../models/account";
 import embeds from "../utils/embeds";
 import _ from "lodash";
 import { LeafMessageModel } from "../models/leafMessage";
+import moment from "moment";
 
 export default class LeafCommand extends Command {
   cmdName = "leaf";
@@ -13,11 +14,15 @@ export default class LeafCommand extends Command {
   async run(message: Message) {
     if (message.channel.id === config.channels.leafCommands) {
       const accounts = await AccountModel.find({
-        createdAt: { $lte: new Date(Date.now() - 30 * 60e3) },
+        createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
       }).limit(config.leafAccountsAmount);
       if (accounts?.length) {
+        await AccountModel.deleteMany({
+          _id: { $in: accounts.map((x) => x._id) },
+        });
+
         const accountsLeft = await AccountModel.countDocuments({
-          createdAt: { $lte: new Date(Date.now() - 30 * 60e3) },
+          createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
         });
         const leafMessage = await message.channel.send(
           message.author.toString(),
@@ -27,7 +32,9 @@ export default class LeafCommand extends Command {
             .addFields(
               accounts.map((account, i) => {
                 return {
-                  name: `${i + 1}. ${account.username}`,
+                  name: `${i + 1}. ${account.username} (${moment(
+                    account.createdAt
+                  ).fromNow()})`,
                   value: account.items.join("\n"),
                   inline: false,
                 };
@@ -44,10 +51,6 @@ export default class LeafCommand extends Command {
           authorId: message.author.id,
           messageId: leafMessage.id,
           users: accounts,
-        });
-
-        await AccountModel.deleteMany({
-          _id: { $in: accounts.map((x) => x._id) },
         });
       } else {
         message.channel.send(
