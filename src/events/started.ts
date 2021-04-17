@@ -27,6 +27,7 @@ export default class Started extends Event {
       bazaarUpdater(this.client.hypixel);
     }, 60 * 60e3);
 
+    accountArchiver();
     setInterval(() => {
       accountArchiver();
     }, 5 * 60e3);

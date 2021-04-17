@@ -12,14 +12,32 @@ export default class LeafCommand extends Command {
   cmdName = "leaf";
   description = "To be honest we're just trying to have some fun leafing kids.";
 
-  async run(message: Message) {
+  async run(message: Message, args: string[]) {
     if (message.channel.id === config.channels.leafCommands) {
-      const accounts: DocumentType<Account>[] = await AccountModel.aggregate([
-        {
-          $match: { createdAt: { $gte: new Date(Date.now() - 30 * 60e3) } },
-        },
-        { $sort: { createdAt: -1 } },
-      ]).limit(config.leafAccountsAmount);
+      const filterItemName = args.length ? args.join(" ") : null;
+
+      let accounts: DocumentType<Account>[] = [];
+      if (filterItemName) {
+        accounts = await AccountModel.aggregate([
+          {
+            $match: {
+              items: {
+                $in: ["$items", new RegExp(filterItemName, "i")],
+              },
+              createdAt: { $gte: new Date(Date.now() - 30 * 60e3) },
+            },
+          },
+          { $sort: { createdAt: -1 } },
+        ]).limit(config.leafAccountsAmount);
+        console.log(JSON.stringify(accounts));
+      } else {
+        accounts = await AccountModel.aggregate([
+          {
+            $match: { createdAt: { $gte: new Date(Date.now() - 30 * 60e3) } },
+          },
+          { $sort: { createdAt: -1 } },
+        ]).limit(config.leafAccountsAmount);
+      }
       if (accounts?.length) {
         await AccountModel.deleteMany({
           _id: { $in: accounts.map((x) => x._id) },
@@ -57,11 +75,19 @@ export default class LeafCommand extends Command {
           users: accounts,
         });
       } else {
-        message.channel.send(
-          embeds.error(
-            `There were no accounts found in the database, please be patient for more accounts to load in.`
-          )
-        );
+        if (filterItemName) {
+          message.channel.send(
+            embeds.error(
+              `There were no accounts found in the database with the filter \`${filterItemName}\`, please be patient for more accounts to load in.`
+            )
+          );
+        } else {
+          message.channel.send(
+            embeds.error(
+              `There were no accounts found in the database, please be patient for more accounts to load in.`
+            )
+          );
+        }
       }
     }
   }
