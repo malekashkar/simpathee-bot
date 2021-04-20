@@ -35,7 +35,7 @@ export default class Scraper {
         `Account ${this.bot.username} has logged into Hypixel.`
       );
     });
-    // this.process();
+    this.process();
   }
 
   async process() {
