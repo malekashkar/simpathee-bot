@@ -29,16 +29,17 @@ export default class Scraper {
     });
     this.hypixelApi = new HypixelAPI(this.apiKey);
 
-    this.process();
+    this.bot.once("spawn", () => {
+      Logger.info(
+        `ACCOUNT`,
+        `Account ${this.bot.username} has logged into Hypixel.`
+      );
+    });
+    // this.process();
   }
 
   async process() {
-    this.bot.once("spawn", async () => {
-      Logger.info(
-        `SCRAPING`,
-        `Started scraping process on ${this.bot.username}.`
-      );
-
+    this.bot.on("spawn", async () => {
       await this.teleportDungeonHub();
       await this.scrapePlayers();
       await this.filterQueue();

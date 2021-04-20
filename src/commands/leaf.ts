@@ -29,7 +29,6 @@ export default class LeafCommand extends Command {
           },
           { $sort: { createdAt: -1 } },
         ]).limit(config.leafAccountsAmount);
-        console.log(JSON.stringify(accounts));
       } else {
         accounts = await AccountModel.aggregate([
           {
