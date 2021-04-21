@@ -40,6 +40,7 @@ export default class Scraper {
 
   async process() {
     this.bot.on("spawn", async () => {
+      console.log(this.bot.game);
       await this.teleportDungeonHub();
       await this.scrapePlayers();
       await this.filterQueue();
@@ -48,6 +49,16 @@ export default class Scraper {
         await this.scrapePlayers();
         await this.filterQueue();
       }, 60e3);
+    });
+
+    this.bot.on("kicked", () => {
+      setTimeout(() => {
+        this.bot = Mineflayer.createBot({
+          host: "hypixel.net",
+          username: this.email,
+          password: this.password,
+        });
+      }, 10e3);
     });
   }
 
@@ -242,8 +253,6 @@ export default class Scraper {
   }
 
   async teleportDungeonHub() {
-    await sleep(5000);
-    this.bot.chat("/skyblock");
     await sleep(5000);
     this.bot.chat("/skyblock");
     await sleep(5000);
