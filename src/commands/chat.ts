@@ -7,7 +7,7 @@ export default class ChatCommand extends Command {
   description = "Make the bots on the server say something in chat";
 
   async run(message: Message, args: string[]) {
-    const botNames = this.client.bots.map((bot) => bot.bot.username).join(", ");
+    const botNames = this.client.bots.map((bot) => bot.mineflayerBot.username).join(", ");
     if (args.length < 2)
       return message.channel.send(
         embeds.error(
@@ -17,10 +17,10 @@ export default class ChatCommand extends Command {
 
     const scraper = this.client.bots.find(
       (x) =>
-        x.bot.username?.toLowerCase() === args.shift().toLowerCase() && x.bot
+        x.mineflayerBot.username?.toLowerCase() === args.shift().toLowerCase() && x.mineflayerBot
     );
     if (scraper) {
-      scraper.bot.chat(args.join(" "));
+      scraper.mineflayerBot.chat(args.join(" "));
       return message.channel.send(
         embeds.normal(
           `Chat Message Sent`,

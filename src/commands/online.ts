@@ -9,9 +9,9 @@ export default class OnlineCommand extends Command {
   async run(message: Message) {
     const formattedBots = this.client.bots.map((bot) => {});
 
-    const formattedList = this.client.bots.map((x) => `\`${x.bot.username}\``);
+    const formattedList = this.client.bots.map((x) => `\`${x.mineflayerBot.username}\``);
 
-    console.log(this.client.bots.map((x) => x.bot.scoreboard));
+    console.log(this.client.bots.map((x) => x.mineflayerBot.scoreboard));
 
     await message.channel.send(
       embeds.normal(

@@ -11,63 +11,77 @@ import Logger from "./logger";
 type Player = { username: string; uuid: string };
 
 export default class Scraper {
-  bot: Mineflayer.Bot;
-  hypixelApi: HypixelAPI;
-
-  accountUsernameQueue: Player[] = [];
-  accountUsernamesChecked: Player[] = [];
-
   constructor(
     private email: string,
     private password: string,
     private apiKey: string
   ) {
-    this.bot = Mineflayer.createBot({
-      host: "hypixel.net",
-      username: this.email,
-      password: this.password,
-    });
-    this.hypixelApi = new HypixelAPI(this.apiKey);
-
-    this.bot.once("spawn", () => {
-      Logger.info(
-        `ACCOUNT`,
-        `Account ${this.bot.username} has logged into Hypixel.`
-      );
-    });
-    this.process();
+    this.startup();
   }
 
-  async process() {
-    this.bot.on("spawn", async () => {
-      console.log(this.bot.game);
-      await this.teleportDungeonHub();
-      await this.scrapePlayers();
-      await this.filterQueue();
-      setInterval(async () => {
-        await this.teleportDungeonHub();
-        await this.scrapePlayers();
-        await this.filterQueue();
-      }, 60e3);
+  loginOptions = {
+    host: "hypixel.net",
+    username: this.email,
+    password: this.password,
+  };
+
+  mineflayerBot: Mineflayer.Bot = Mineflayer.createBot(this.loginOptions);
+  hypixelApi: HypixelAPI = new HypixelAPI(this.apiKey);
+
+  accountUsernameQueue: Player[] = [];
+  accountUsernamesChecked: Player[] = [];
+
+  async startup() {
+    this.mineflayerBot.once("spawn", () => {
+      Logger.info(
+        `ACCOUNT`,
+        `Account ${this.mineflayerBot.username} has logged into Hypixel.`
+      );
     });
 
-    this.bot.on("kicked", () => {
-      setTimeout(() => {
-        this.bot = Mineflayer.createBot({
-          host: "hypixel.net",
-          username: this.email,
-          password: this.password,
-        });
-      }, 10e3);
+    this.mineflayerBot.on("error", (err: any) => {
+      if (err?.code == undefined) {
+        setTimeout(() => {
+          this.mineflayerBot = Mineflayer.createBot(this.loginOptions);
+          this.startup();
+        }, 30000);
+      }
     });
+
+    this.mineflayerBot.on("end", function () {
+      setTimeout(() => {
+        this.mineflayerBot = Mineflayer.createBot(this.loginOptions);
+        this.startup();
+      }, 30000);
+    });
+
+    this.mineflayerBot.on("spawn", async () => {
+      await this.startDungeonScrape();
+      setInterval(async () => {
+        await this.startDungeonScrape();
+      }, 60e3);
+    });
+  }
+
+  async startDungeonScrape() {
+    await sleep(10e3);
+    this.mineflayerBot.chat("/skyblock");
+    await sleep(10e3);
+    this.mineflayerBot.chat("/warp hub");
+    await sleep(10e3);
+    this.mineflayerBot.chat("/warp dungeon_hub");
+    await sleep(10e3);
+
+    this.scrapePlayers();
   }
 
   async scrapePlayers() {
-    const filteredPlayers = Object.values(this.bot.players)
+    const filteredPlayers = Object.values(this.mineflayerBot.players)
       .filter(
         (player) =>
           !player.username.includes("!") &&
-          player.username.toLowerCase() !== this.bot.username.toLowerCase() &&
+          player.username.toLowerCase() !==
+            this.mineflayerBot.username.toLowerCase() &&
           !this.accountUsernamesChecked.some(
             (account) => account.username === player.username
           ) &&
@@ -85,13 +99,18 @@ export default class Scraper {
     this.accountUsernameQueue = this.accountUsernameQueue.concat(
       filteredPlayers
     );
-    Logger.info(`SCRAPING`, `Scraped players on ${this.bot.username}.`);
+    Logger.info(
+      `SCRAPING`,
+      `Scraped players on ${this.mineflayerBot.username}.`
+    );
+
+    this.filterQueue();
   }
 
   async filterQueue() {
     Logger.info(
       `SCRAPING`,
-      `Filtering players on account ${this.bot.username}.`
+      `Filtering players on account ${this.mineflayerBot.username}.`
     );
     for (const player of this.accountUsernameQueue.slice(0, 50)) {
       Logger.info(`FILTER`, `Filtering the player ${player.username}.`);
@@ -101,7 +120,7 @@ export default class Scraper {
     }
     Logger.info(
       `SCRAPING`,
-      `Finished filtering players on account ${this.bot.username}.`
+      `Finished filtering players on account ${this.mineflayerBot.username}.`
     );
   }
 
@@ -250,15 +269,5 @@ export default class Scraper {
       .flat();
 
     return currentProfileItems.concat(backpackItems);
-  }
-
-  async teleportDungeonHub() {
-    await sleep(5000);
-    this.bot.chat("/skyblock");
-    await sleep(5000);
-    this.bot.chat("/warp hub");
-    await sleep(5000);
-    this.bot.chat("/warp dungeon_hub");
-    await sleep(5000);
   }
 }
