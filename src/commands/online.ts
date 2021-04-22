@@ -7,19 +7,31 @@ export default class OnlineCommand extends Command {
   description = "Check what leafing bots are currently online.";
 
   async run(message: Message) {
-    const formattedBots = this.client.bots.map((bot) => {});
-
-    const formattedList = this.client.bots.map((x) => `\`${x.mineflayerBot.username}\``);
-
-    console.log(this.client.bots.map((x) => x.mineflayerBot.scoreboard));
+    const playersActivity = (
+      await Promise.all(
+        this.client.bots.map(async (bot) => {
+          const playerActivity = await this.client.hypixel.getPlayerActivity(
+            bot.mineflayerBot.player.uuid
+          );
+          if (playerActivity) {
+            return {
+              name: `${bot.mineflayerBot.username}`,
+              value: `${
+                playerActivity.session.online
+                  ? `🟢 Online (${
+                      playerActivity.session.gameType
+                    } ~ ${playerActivity.session.mode.toLowerCase()})`
+                  : `🔴 Offline`
+              }`,
+              inline: true,
+            };
+          }
+        })
+      )
+    ).filter((x) => !!x);
 
     await message.channel.send(
-      embeds.normal(
-        `Online Leafers`,
-        formattedList.length
-          ? formattedList.join(", ")
-          : `\`No accounts are currently online.\``
-      )
+      embeds.empty().setTitle(`Online Leafers`).addFields(playersActivity)
     );
   }
 }

@@ -1,7 +1,7 @@
 import { getModelForClass, prop } from "@typegoose/typegoose";
 
 export class LeafUser {
-  @prop({ unique: true })
+  @prop()
   username: string;
 
   @prop({ type: String, default: [] })

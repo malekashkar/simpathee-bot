@@ -106,7 +106,7 @@ async function auctionUpdater(hypixelApi: HypixelAPI) {
   ) {
     logger.info(`AUCTIONS`, `Started auction items scraping.`);
     await updateAuctionItemPrices(await getAllAuctionItems(hypixelApi));
-    logger.info(`AUCTIONS`, `Bazaar items updated!`);
+    logger.info(`AUCTIONS`, `Auction items updated!`);
   }
 
   if (auctionsLastUpdate?.lastTime + 6 * 60 * 60e3 <= Date.now()) {
