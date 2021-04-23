@@ -12,14 +12,12 @@ import embeds from "../utils/embeds";
 import Logger from "../utils/logger";
 
 import { Account, AccountModel } from "../models/account";
-import { Archived, ArchivedModel } from "../models/archived";
 import { AuctionItem, AuctionModel } from "../models/auctionItem";
 import { BazaarItem, BazaarModel } from "../models/bazaarItem";
 import { Timestamp, TimestampModel } from "../models/timestamp";
 
 const Models = {
   AccountModel,
-  ArchivedModel,
   AuctionModel,
   BazaarModel,
   TimestampModel,

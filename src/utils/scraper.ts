@@ -2,7 +2,7 @@ import Mineflayer from "mineflayer";
 import { sleep } from ".";
 import { validArmor, validWeapons } from "../config";
 import { AccountModel } from "../models/account";
-import { ArchivedModel } from "../models/archived";
+import { BlacklistedModel } from "../models/blacklisted";
 import { parseInventoryData } from "./hypixel";
 import { HypixelAPI } from "./hypixelApi";
 import { IProfileMember } from "./interfaces";
@@ -52,12 +52,13 @@ export default class Scraper {
       }, 60e3);
     });
 
+    const that = this;
     this.mineflayerBot.on("error", () => {
       this.online = false;
       setTimeout(() => {
         this.mineflayerBot.end();
         this.mineflayerBot = Mineflayer.createBot(this.loginOptions);
-        this.startup();
+        that.startup();
       }, 30e3);
     });
 
@@ -65,7 +66,7 @@ export default class Scraper {
       this.online = false;
       setTimeout(() => {
         this.mineflayerBot = Mineflayer.createBot(this.loginOptions);
-        this.startup();
+        that.startup();
       }, 30e3);
     });
   }
@@ -207,15 +208,13 @@ export default class Scraper {
           const accountModel = await AccountModel.findOne({
             username: player.username,
           });
-          const archivedModel = await ArchivedModel.findOne({
+          const blacklistedDocument = await BlacklistedModel.findOne({
             username: player.username,
           });
 
           if (
-            (accountModel?.items.length &&
-              accountModel?.items?.includes(item.displayName)) ||
-            (archivedModel?.items.length &&
-              archivedModel?.items?.includes(item.displayName))
+            blacklistedDocument ||
+            accountModel?.items?.includes(item.displayName)
           )
             continue;
 

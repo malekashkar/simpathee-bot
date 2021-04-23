@@ -22,7 +22,7 @@ export class HypixelAPI {
     if (!this.checkCounters()) return;
 
     const request = await fetch(
-      `https://api.hypixel.net/skyblock/auctions?${apiKey}&page=${pageNumber}`
+      `http://api.hypixel.net/skyblock/auctions?${apiKey}&page=${pageNumber}`
     );
     if (request.status === 429) {
       this.throttleTime = new Date();
@@ -40,7 +40,7 @@ export class HypixelAPI {
     if (!this.checkCounters()) return;
 
     const request = await fetch(
-      `https://api.hypixel.net/skyblock/bazaar?key=${apiKey}`
+      `http://api.hypixel.net/skyblock/bazaar?key=${apiKey}`
     );
     if (request.status === 429) {
       this.throttleTime = new Date();
@@ -58,7 +58,7 @@ export class HypixelAPI {
     if (!this.checkCounters()) return;
 
     const request = await fetch(
-      `https://api.hypixel.net/guild?id=${guildId}&key=${apiKey}`
+      `http://api.hypixel.net/guild?id=${guildId}&key=${apiKey}`
     );
     if (request.status === 429) {
       this.throttleTime = new Date();
@@ -76,7 +76,7 @@ export class HypixelAPI {
     if (!this.checkCounters()) return;
 
     const request = await fetch(
-      `https://api.hypixel.net/status?uuid=${playerUuid}&key=${apiKey}`
+      `http://api.hypixel.net/status?uuid=${playerUuid}&key=${apiKey}`
     );
     if (request.status === 429) {
       this.throttleTime = new Date();
@@ -94,7 +94,7 @@ export class HypixelAPI {
     if (!this.checkCounters()) return;
 
     const request = await fetch(
-      `https://api.hypixel.net/skyblock/profiles?key=${apiKey}&uuid=${playerUuid}`
+      `http://api.hypixel.net/skyblock/profiles?key=${apiKey}&uuid=${playerUuid}`
     );
     if (request.status === 429) {
       this.throttleTime = new Date();
@@ -110,7 +110,7 @@ export class HypixelAPI {
     if (!this.checkCounters()) return;
 
     const request = await fetch(
-      `https://api.hypixel.net/player?key=${apiKey}&uuid=${playerUuid}`
+      `http://api.hypixel.net/player?key=${apiKey}&uuid=${playerUuid}`
     );
     if (request.status === 429) {
       this.throttleTime = new Date();
@@ -124,7 +124,7 @@ export class HypixelAPI {
 
   async playerUuidToUsername(playerUuid: string) {
     const request = await fetch(
-      `https://api.mojang.com/user/profiles/${playerUuid}/names`
+      `http://api.mojang.com/user/profiles/${playerUuid}/names`
     );
     if (!request.ok) return;
 
@@ -136,7 +136,7 @@ export class HypixelAPI {
 
   async getMojangProfile(playerName: string) {
     const request = await fetch(
-      `https://api.mojang.com/users/profiles/minecraft/${playerName}`
+      `http://api.mojang.com/users/profiles/minecraft/${playerName}`
     );
     if (request.status !== 200) return;
 
@@ -149,29 +149,35 @@ export class HypixelAPI {
 
     if (!this.keyThrottled && !this.throttleTime) {
       if (!this.lastRequest || !this.requestsInMinute) {
+        console.log(`Case 1`);
         this.lastRequest = new Date();
         this.requestsInMinute = 1;
       } else if (
-        new Date().getTime() - this.lastRequest.getTime() <= 60e3 &&
+        new Date().getTime() - this.lastRequest.getTime() <= 120e3 &&
         this.requestsInMinute < requestLimitPerMinute
       ) {
+        console.log(`Case 2`);
         this.lastRequest = new Date();
         this.requestsInMinute += 1;
       } else if (
-        new Date().getTime() - this.lastRequest.getTime() > 60e3 &&
+        new Date().getTime() - this.lastRequest.getTime() > 120e3 &&
         this.requestsInMinute < requestLimitPerMinute
       ) {
+        console.log(`Case 3`);
         this.lastRequest = new Date();
         this.requestsInMinute = 1;
       } else if (
-        this.requestsInMinute >= requestLimitPerMinute &&
-        new Date().getTime() - this.lastRequest.getTime() <= 60e3
+        new Date().getTime() - this.lastRequest.getTime() <= 120e3 &&
+        this.requestsInMinute >= requestLimitPerMinute
       ) {
+        console.log(`Case 4`);
         return false;
       }
-    } else if (new Date().getTime() - this.throttleTime.getTime() < 60e3) {
+    } else if (new Date().getTime() - this.throttleTime.getTime() < 120e3) {
+      console.log(`Case 5`);
       return false;
     } else {
+      console.log(`Case 6`);
       this.keyThrottled = undefined;
       this.throttleTime = undefined;
     }
