@@ -10,21 +10,23 @@ export default class OnlineCommand extends Command {
     const playersActivity = (
       await Promise.all(
         this.client.bots.map(async (bot) => {
-          const playerActivity = await this.client.hypixel.getPlayerActivity(
-            bot.mineflayerBot.player.uuid
-          );
-          if (playerActivity) {
-            return {
-              name: `${bot.mineflayerBot.username}`,
-              value: `${
-                playerActivity.session.online
-                  ? `🟢 Online (${
-                      playerActivity.session.gameType
-                    } ~ ${playerActivity.session.mode.toLowerCase()})`
-                  : `🔴 Offline`
-              }`,
-              inline: true,
-            };
+          if (bot.mineflayerBot?.player?.uuid) {
+            const playerActivity = await this.client.hypixel.getPlayerActivity(
+              bot.mineflayerBot.player.uuid
+            );
+            if (playerActivity) {
+              return {
+                name: `${bot.mineflayerBot.username}`,
+                value: `${
+                  playerActivity.session.online
+                    ? `🟢 Online (${
+                        playerActivity.session.gameType
+                      } ~ ${playerActivity.session.mode.toLowerCase()})`
+                    : `🔴 Offline`
+                }`,
+                inline: true,
+              };
+            }
           }
         })
       )

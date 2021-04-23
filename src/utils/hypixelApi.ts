@@ -145,39 +145,33 @@ export class HypixelAPI {
   }
 
   checkCounters() {
-    const requestLimitPerMinute = 100;
-
+    const requestLimitPerMinute = 120;
     if (!this.keyThrottled && !this.throttleTime) {
       if (!this.lastRequest || !this.requestsInMinute) {
+        // There is no last request neither any requests at all
         console.log(`Case 1`);
         this.lastRequest = new Date();
         this.requestsInMinute = 1;
-      } else if (
-        new Date().getTime() - this.lastRequest.getTime() <= 120e3 &&
-        this.requestsInMinute < requestLimitPerMinute
-      ) {
+      } else if (new Date().getTime() - this.lastRequest.getTime() > 90e3) {
+        // The last request was made 60+ seconds ago
         console.log(`Case 2`);
         this.lastRequest = new Date();
-        this.requestsInMinute += 1;
-      } else if (
-        new Date().getTime() - this.lastRequest.getTime() > 120e3 &&
-        this.requestsInMinute < requestLimitPerMinute
-      ) {
-        console.log(`Case 3`);
-        this.lastRequest = new Date();
         this.requestsInMinute = 1;
-      } else if (
-        new Date().getTime() - this.lastRequest.getTime() <= 120e3 &&
-        this.requestsInMinute >= requestLimitPerMinute
-      ) {
-        console.log(`Case 4`);
-        return false;
+      } else if (new Date().getTime() - this.lastRequest.getTime() <= 90e3) {
+        if (this.requestsInMinute < requestLimitPerMinute) {
+          // The last request was made in the past 60 seconds and there's less than the max requests
+          console.log(`Case 3`);
+          this.lastRequest = new Date();
+          this.requestsInMinute += 1;
+        } else if (this.requestsInMinute >= requestLimitPerMinute) {
+          // The last request was made in the past 60 seconds and there's less than the max requests
+          console.log(`Case 4`);
+          return false;
+        }
       }
-    } else if (new Date().getTime() - this.throttleTime.getTime() < 120e3) {
-      console.log(`Case 5`);
+    } else if (new Date().getTime() - this.throttleTime.getTime() < 90e3) {
       return false;
     } else {
-      console.log(`Case 6`);
       this.keyThrottled = undefined;
       this.throttleTime = undefined;
     }
