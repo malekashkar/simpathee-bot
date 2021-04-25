@@ -10,6 +10,7 @@ export default class OnlineCommand extends Command {
     const playersActivity = (
       await Promise.all(
         this.client.bots.map(async (bot) => {
+          console.log(bot);
           if (bot.mineflayerBot?.player?.uuid) {
             const playerActivity = await this.client.hypixel.getPlayerActivity(
               bot.mineflayerBot.player.uuid

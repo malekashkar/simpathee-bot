@@ -1,3 +1,5 @@
+import { Account } from "./utils/scraper";
+
 export default {
   prefix: "!",
   testingPrefix: "?",
@@ -49,7 +51,7 @@ export const validArmor = [
   "SPEED_WITHER_BOOTS",
 ];
 
-export const accounts = [
+export const accounts: Account[] = [
   {
     email: "mac.myers21@gmail.com",
     password: "Achillin21",

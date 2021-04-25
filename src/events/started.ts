@@ -33,13 +33,8 @@ export default class Started extends Event {
     }, 5 * 60e3);
 
     if (process.env.NODE_ENV === "production") {
-      for (let i = 0; i < 5; i++) {
-        const bot = new Scraper(
-          accounts[i].email,
-          accounts[i].password,
-          accounts[i].apiKey
-        );
-        this.client.bots.push(bot);
+      for (const account of accounts) {
+        this.client.bots.push(new Scraper(account));
       }
     }
   }

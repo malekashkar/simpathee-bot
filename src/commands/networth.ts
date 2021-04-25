@@ -27,10 +27,10 @@ export default class NetworthCommand extends Command {
         embeds.error(`The username doesn't seem to be a valid MC username.`)
       );
 
-    const skyblockProfiles = await this.client.hypixel.getSkyblockProfile(
+    const skyblockInformation = await this.client.hypixel.getSkyblockInformation(
       mojangProfile.id
     );
-    if (!skyblockProfiles)
+    if (!skyblockInformation?.profiles?.length)
       return message.channel.send(
         embeds.error(
           `Error finding any skyblock profiles for **${mojangProfile.name}**.`
@@ -38,7 +38,7 @@ export default class NetworthCommand extends Command {
       );
 
     const loadingEmbed = await message.channel.send(embeds.loading());
-    const latestProfile = skyblockProfiles.sort((profilea, profileb) => {
+    const latestProfile = skyblockInformation.profiles.sort((profilea, profileb) => {
       if (
         profilea.members[mojangProfile.id].last_save >
         profileb.members[mojangProfile.id].last_save

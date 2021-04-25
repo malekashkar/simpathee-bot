@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import fetch from "node-fetch";
 import {
   ISkyblockProfilesResponse,
@@ -90,7 +91,7 @@ export class HypixelAPI {
     }
   }
 
-  async getSkyblockProfile(playerUuid: string, apiKey = this.apiKey) {
+  async getSkyblockInformation(playerUuid: string, apiKey = this.apiKey) {
     if (!this.checkCounters()) return;
 
     const request = await fetch(
@@ -103,7 +104,7 @@ export class HypixelAPI {
     if (!request.ok) return;
 
     const response = (await request.json()) as ISkyblockProfilesResponse;
-    if (response) return response.profiles;
+    if (response) return response;
   }
 
   async getHypixelPlayer(playerUuid: string, apiKey = this.apiKey) {
@@ -149,31 +150,35 @@ export class HypixelAPI {
     if (!this.keyThrottled && !this.throttleTime) {
       if (!this.lastRequest || !this.requestsInMinute) {
         // There is no last request neither any requests at all
-        console.log(`Case 1`);
         this.lastRequest = new Date();
         this.requestsInMinute = 1;
       } else if (new Date().getTime() - this.lastRequest.getTime() > 90e3) {
-        // The last request was made 60+ seconds ago
-        console.log(`Case 2`);
+        // The last request was made 90+ seconds ago
+        console.log(chalk.red(`Case 1 - API Fail`));
         this.lastRequest = new Date();
         this.requestsInMinute = 1;
       } else if (new Date().getTime() - this.lastRequest.getTime() <= 90e3) {
         if (this.requestsInMinute < requestLimitPerMinute) {
-          // The last request was made in the past 60 seconds and there's less than the max requests
-          console.log(`Case 3`);
+          // The last request was made in the past 90 seconds and there's less than the max requests
           this.lastRequest = new Date();
           this.requestsInMinute += 1;
         } else if (this.requestsInMinute >= requestLimitPerMinute) {
-          // The last request was made in the past 60 seconds and there's less than the max requests
-          console.log(`Case 4`);
+          // The last request was made in the past 90 seconds and there's less than the max requests
+          console.log(chalk.red(`Case 2 - API Fail`));
           return false;
+        } else {
+          console.log(chalk.red(`Case 1 - API Success/Fail`));
         }
+      } else {
+        console.log(chalk.red(`Case 2 - API Success/Fail`));
       }
     } else if (new Date().getTime() - this.throttleTime.getTime() < 90e3) {
+      console.log(chalk.red(`Case 3 - API Fail`));
       return false;
     } else {
-      this.keyThrottled = undefined;
-      this.throttleTime = undefined;
+      console.log(chalk.red(`Case 4 - API Fail`));
+      this.keyThrottled = null;
+      this.throttleTime = null;
     }
     return true;
   }
